@@ -1,8 +1,8 @@
-# Efforless - AI-Powered Personal Automation Platform
+# Effortless - AI-Powered Personal Automation Platform
 
 ## Overview
 
-Efforless is a full-stack web application that enables users to automate everyday tasks through natural language commands. Users can book cabs, pay bills, order groceries and food, and set reminders by simply typing or speaking their requests. The system uses Google's Gemini AI to parse natural language prompts into structured automation tasks, which are then executed through realistic mock simulations with real-time updates via WebSocket connections.
+Effortless is a full-stack web application that enables users to automate everyday tasks through natural language commands. Users can book cabs, pay bills, order groceries and food, and set reminders by simply typing or speaking their requests. The system uses Google's Gemini AI to parse natural language prompts into structured automation tasks, which are then executed through realistic mock simulations with real-time updates via WebSocket connections.
 
 The application features a modern, futuristic design inspired by Notion's clean productivity interface, Framer's smooth animations, and Apple's precision timing, creating an ambient automation platform with glassmorphic effects and smooth transitions.
 

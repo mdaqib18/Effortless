@@ -18,7 +18,7 @@ export interface ParsedPrompt {
 
 export async function parseAutomationPrompt(prompt: string): Promise<ParsedPrompt> {
   try {
-    const systemPrompt = `You are an AI assistant for an automation platform called Efforless. 
+    const systemPrompt = `You are an AI assistant for an automation platform called Effortless. 
 Parse user prompts into structured automation tasks. Detect the task type (cab, bill, grocery, food, reminder), 
 action, platform/provider, time, recurrence, and category.
 

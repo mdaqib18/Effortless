@@ -334,7 +334,7 @@ export default function Dashboard() {
               <span className="text-xl">✨</span>
             </div>
             <div>
-              <h1 className="text-xl font-bold text-foreground">Efforless</h1>
+              <h1 className="text-xl font-bold text-foreground">Effortless</h1>
               <p className="text-sm text-muted-foreground">
                 {user.displayName || user.email}
               </p>

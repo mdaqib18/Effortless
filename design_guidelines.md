@@ -1,4 +1,4 @@
-# Efforless Design Guidelines
+# Effortless Design Guidelines
 
 ## Design Approach
 **Reference-Based**: Drawing inspiration from Notion (clean productivity), Framer (smooth motion), and Apple Clock (precision timing) to create a futuristic, ambient automation platform.

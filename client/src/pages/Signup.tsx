@@ -71,7 +71,7 @@ export default function Signup() {
           >
             <Sparkles className="h-8 w-8 text-primary-foreground" />
           </motion.div>
-          <h1 className="text-4xl font-bold text-foreground mb-2">Efforless</h1>
+          <h1 className="text-4xl font-bold text-foreground mb-2">Effortless</h1>
           <p className="text-muted-foreground">Your AI-powered automation platform</p>
         </div>
 
