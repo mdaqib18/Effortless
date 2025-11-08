@@ -17,7 +17,7 @@ export function requiresPayment(prompt: string, taskType?: string): boolean {
   
   const keywordMatch = paymentKeywords.some(keyword => lower.includes(keyword));
   
-  const taskTypeMatch = taskType && ["bill", "cab", "grocery", "food"].includes(taskType);
+  const taskTypeMatch = taskType ? ["bill", "cab", "grocery", "food"].includes(taskType) : false;
   
   return keywordMatch || taskTypeMatch;
 }

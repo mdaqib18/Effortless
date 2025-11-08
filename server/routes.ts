@@ -154,7 +154,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               await executeCabBooking(id, broadcast);
               break;
             case "bill":
-              await executeBillPayment(id, task.platform, broadcast);
+              await executeBillPayment(id, task.platform || "Unknown", broadcast);
               break;
             case "grocery":
               await executeGroceryOrder(id, broadcast);

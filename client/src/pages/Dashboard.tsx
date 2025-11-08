@@ -12,10 +12,13 @@ import { TaskCard } from "@/components/TaskCard";
 import { NotificationPopup } from "@/components/NotificationPopup";
 import { Confetti } from "@/components/Confetti";
 import { LoadingSkeleton } from "@/components/LoadingSpinner";
+import { PaymentModal } from "@/components/PaymentModal";
+import { ThreeDSecureModal } from "@/components/ThreeDSecureModal";
 import { LogOut, Plus, MessageSquare, Settings as SettingsIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { createSocketConnection } from "@/lib/socket";
-import type { Task, Reminder, TaskUpdate } from "@shared/schema";
+import { requiresPayment, extractAmount } from "@/utils/paymentDetection";
+import type { Task, Reminder, TaskUpdate, PaymentUpdate } from "@shared/schema";
 
 interface Message {
   id: string;
@@ -44,6 +47,10 @@ export default function Dashboard() {
   const [taskUpdates, setTaskUpdates] = useState<Record<string, TaskUpdate>>({});
   const [activeReminder, setActiveReminder] = useState<Reminder | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [show3DSModal, setShow3DSModal] = useState(false);
+  const [threeDSStatus, setThreeDSStatus] = useState<"confirming" | "processing" | "success" | "failed" | null>(null);
+  const [pendingPayment, setPendingPayment] = useState<{ amount: number; taskData: any; paymentId?: string } | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -87,8 +94,37 @@ export default function Dashboard() {
       }
     });
 
-    return () => socket.disconnect();
-  }, [user, toast]);
+    socket.on('paymentUpdate', (data: PaymentUpdate) => {
+      if (data.status === "processing") {
+        setThreeDSStatus("processing");
+      } else if (data.status === "success") {
+        setThreeDSStatus("success");
+        setTimeout(() => {
+          setShow3DSModal(false);
+          setThreeDSStatus(null);
+          if (pendingPayment?.taskData) {
+            createTaskAfterPayment(pendingPayment.taskData);
+          }
+        }, 2000);
+      } else if (data.status === "failed") {
+        setThreeDSStatus("failed");
+        setTimeout(() => {
+          setShow3DSModal(false);
+          setThreeDSStatus(null);
+          setPendingPayment(null);
+          toast({
+            title: "Payment failed",
+            description: "Please try again",
+            variant: "destructive",
+          });
+        }, 2000);
+      }
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [user, toast, pendingPayment]);
 
   const { data: tasks = [], isLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks", user?.uid],
@@ -122,6 +158,86 @@ export default function Dashboard() {
     },
   });
 
+  const createTaskAfterPayment = async (taskData: any) => {
+    try {
+      const createdTask = await createTaskMutation.mutateAsync(taskData);
+      
+      toast({
+        title: "Payment successful - Task activated!",
+        description: "Your automation is starting now...",
+      });
+
+      if (createdTask && createdTask.id) {
+        await runTaskMutation.mutateAsync(createdTask.id);
+      }
+      
+      setPendingPayment(null);
+      setShowPaymentModal(false);
+    } catch (error: any) {
+      toast({
+        title: "Failed to create task",
+        description: error.message || String(error),
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handlePayNow = async () => {
+    if (!pendingPayment) return;
+
+    try {
+      const response = await apiRequest("POST", "/api/payments/initiate", {
+        userId: user.uid,
+        amount: pendingPayment.amount,
+      });
+
+      setPendingPayment(prev => prev ? { ...prev, paymentId: response.paymentId } : null);
+      setShowPaymentModal(false);
+      setShow3DSModal(true);
+      setThreeDSStatus("confirming");
+    } catch (error: any) {
+      toast({
+        title: "Failed to initiate payment",
+        description: error.message || String(error),
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleConfirm3DS = async () => {
+    if (!pendingPayment?.paymentId) return;
+
+    try {
+      await apiRequest("POST", "/api/payments/confirm", {
+        paymentId: pendingPayment.paymentId,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Payment confirmation failed",
+        description: error.message || String(error),
+        variant: "destructive",
+      });
+      setShow3DSModal(false);
+      setThreeDSStatus(null);
+    }
+  };
+
+  const handleCancelPayment = () => {
+    if (pendingPayment?.paymentId) {
+      apiRequest("POST", "/api/payments/cancel", {
+        paymentId: pendingPayment.paymentId,
+      }).catch(console.error);
+    }
+    setShowPaymentModal(false);
+    setShow3DSModal(false);
+    setThreeDSStatus(null);
+    setPendingPayment(null);
+    toast({
+      title: "Payment cancelled",
+      description: "Task creation cancelled",
+    });
+  };
+
   const handleSendMessage = async (message: string) => {
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -148,7 +264,7 @@ export default function Dashboard() {
       setMessages((prev) => [...prev, assistantMessage]);
 
       if (response.taskType && !response.clarification) {
-        const createdTask = await createTaskMutation.mutateAsync({
+        const taskData = {
           userId: user.uid,
           taskType: response.taskType,
           action: response.action,
@@ -158,15 +274,31 @@ export default function Dashboard() {
           recurrence: response.recurrence || "once",
           scheduledTime: response.time,
           status: "pending",
-        });
+        };
 
-        toast({
-          title: "Task created successfully",
-          description: "Your automation is starting now...",
-        });
+        if (requiresPayment(message, response.taskType)) {
+          const amount = extractAmount(message, response.taskType);
+          setPendingPayment({ amount, taskData });
+          setShowPaymentModal(true);
+          
+          const paymentMessage: Message = {
+            id: (Date.now() + 2).toString(),
+            role: "assistant",
+            content: `This automation requires a payment of ₹${amount.toLocaleString('en-IN')}. Please complete the payment to proceed.`,
+            timestamp: new Date(),
+          };
+          setMessages((prev) => [...prev, paymentMessage]);
+        } else {
+          const createdTask = await createTaskMutation.mutateAsync(taskData);
 
-        if (createdTask && createdTask.id) {
-          await runTaskMutation.mutateAsync(createdTask.id);
+          toast({
+            title: "Task created successfully",
+            description: "Your automation is starting now...",
+          });
+
+          if (createdTask && createdTask.id) {
+            await runTaskMutation.mutateAsync(createdTask.id);
+          }
         }
       }
     } catch (error: any) {
@@ -396,6 +528,22 @@ export default function Dashboard() {
       />
 
       <Confetti show={showConfetti} onComplete={() => setShowConfetti(false)} />
+
+      <PaymentModal
+        isOpen={showPaymentModal}
+        amount={pendingPayment?.amount || 0}
+        onPayNow={handlePayNow}
+        onCancel={handleCancelPayment}
+        taskDescription={pendingPayment?.taskData?.prompt}
+      />
+
+      <ThreeDSecureModal
+        isOpen={show3DSModal}
+        amount={pendingPayment?.amount || 0}
+        onConfirm={handleConfirm3DS}
+        onCancel={handleCancelPayment}
+        status={threeDSStatus}
+      />
     </div>
   );
 }
