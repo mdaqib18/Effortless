@@ -3,8 +3,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Send, Mic, Sparkles, Loader2 } from "lucide-react";
+import { Send, Mic, Sparkles, Loader2, Repeat } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TaskRoutineToggle } from "@/components/TaskRoutineToggle";
 
 interface Message {
   id: string;
@@ -18,13 +19,14 @@ interface Message {
 }
 
 interface ChatInterfaceProps {
-  onSendMessage: (message: string) => Promise<void>;
+  onSendMessage: (message: string, taskType: "one_time" | "routine") => Promise<void>;
   messages: Message[];
   isProcessing: boolean;
 }
 
 export function ChatInterface({ onSendMessage, messages, isProcessing }: ChatInterfaceProps) {
   const [input, setInput] = useState("");
+  const [isRoutine, setIsRoutine] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -35,8 +37,12 @@ export function ChatInterface({ onSendMessage, messages, isProcessing }: ChatInt
     e.preventDefault();
     if (!input.trim() || isProcessing) return;
 
-    await onSendMessage(input);
+    await onSendMessage(input, isRoutine ? "routine" : "one_time");
     setInput("");
+  };
+
+  const handleToggle = () => {
+    setIsRoutine(!isRoutine);
   };
 
   return (
@@ -132,13 +138,14 @@ export function ChatInterface({ onSendMessage, messages, isProcessing }: ChatInt
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="border-t border-border bg-card/50 backdrop-blur-sm p-4">
+      <div className="border-t border-border bg-card/50 backdrop-blur-sm p-4 space-y-3">
         <form onSubmit={handleSubmit} className="flex gap-2">
+          <TaskRoutineToggle isRoutine={isRoutine} onToggle={handleToggle} />
           <div className="relative flex-1">
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Type your automation request..."
+              placeholder={isRoutine ? "Set up a recurring automation..." : "Type your automation request..."}
               className="pr-12 h-12 bg-input border-input text-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary transition-all"
               disabled={isProcessing}
               data-testid="input-chat"
@@ -167,6 +174,22 @@ export function ChatInterface({ onSendMessage, messages, isProcessing }: ChatInt
             )}
           </Button>
         </form>
+
+        <AnimatePresence>
+          {isRoutine && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3 }}
+              className="flex items-center gap-2 text-xs text-muted-foreground"
+              data-testid="hint-routine-mode"
+            >
+              <Repeat className="h-3 w-3 text-green-400" />
+              <span>Routine mode active — Effortless will repeat this automation automatically</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

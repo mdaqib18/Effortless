@@ -162,12 +162,20 @@ export default function Dashboard() {
     try {
       const createdTask = await createTaskMutation.mutateAsync(taskData);
       
+      const isRoutineMode = taskData.scheduleType === "routine";
+      const successMessage = isRoutineMode
+        ? "Payment successful - Routine scheduled!"
+        : "Payment successful - Task activated!";
+      const descriptionMessage = isRoutineMode
+        ? "Effortless will handle this automatically"
+        : "Your automation is starting now...";
+
       toast({
-        title: "Payment successful - Task activated!",
-        description: "Your automation is starting now...",
+        title: successMessage,
+        description: descriptionMessage,
       });
 
-      if (createdTask && createdTask.id) {
+      if (createdTask && createdTask.id && !isRoutineMode) {
         await runTaskMutation.mutateAsync(createdTask.id);
       }
       
@@ -238,7 +246,7 @@ export default function Dashboard() {
     });
   };
 
-  const handleSendMessage = async (message: string) => {
+  const handleSendMessage = async (message: string, taskType: "one_time" | "routine") => {
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
@@ -251,10 +259,15 @@ export default function Dashboard() {
     try {
       const response = await apiRequest("POST", "/api/ai/parse", { prompt: message });
       
+      const isRoutineMode = taskType === "routine";
+      const confirmationText = isRoutineMode 
+        ? response.reply || "I've detected your routine automation request. Setting it up..."
+        : response.reply || "I've detected your automation request. Creating task...";
+      
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: response.reply || "I've detected your automation request. Creating task...",
+        content: confirmationText,
         timestamp: new Date(),
         actionDetected: response.taskType ? {
           type: response.taskType,
@@ -271,9 +284,10 @@ export default function Dashboard() {
           prompt: message,
           platform: response.platform,
           category: response.category,
-          recurrence: response.recurrence || "once",
+          recurrence: isRoutineMode ? (response.recurrence || "daily") : "once",
           scheduledTime: response.time,
           status: "pending",
+          scheduleType: taskType,
         };
 
         if (requiresPayment(message, response.taskType)) {
@@ -291,14 +305,31 @@ export default function Dashboard() {
         } else {
           const createdTask = await createTaskMutation.mutateAsync(taskData);
 
+          const successMessage = isRoutineMode
+            ? "Routine automation scheduled"
+            : "Task created successfully";
+          const descriptionMessage = isRoutineMode
+            ? "Effortless will handle this automatically"
+            : "Your automation is starting now...";
+
           toast({
-            title: "Task created successfully",
-            description: "Your automation is starting now...",
+            title: successMessage,
+            description: descriptionMessage,
           });
 
-          if (createdTask && createdTask.id) {
+          if (createdTask && createdTask.id && !isRoutineMode) {
             await runTaskMutation.mutateAsync(createdTask.id);
           }
+
+          const finalMessage: Message = {
+            id: (Date.now() + 3).toString(),
+            role: "assistant",
+            content: isRoutineMode 
+              ? `Routine set — I'll handle this ${taskData.recurrence === 'daily' ? 'every day' : taskData.recurrence === 'weekly' ? 'every week' : taskData.recurrence === 'monthly' ? 'every month' : 'automatically'}.`
+              : "Task activated and running now!",
+            timestamp: new Date(),
+          };
+          setMessages((prev) => [...prev, finalMessage]);
         }
       }
     } catch (error: any) {

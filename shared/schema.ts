@@ -21,6 +21,7 @@ export const tasks = pgTable("tasks", {
   platform: text("platform"),
   category: text("category"),
   recurrence: text("recurrence").default("once"),
+  scheduleType: text("schedule_type").default("one_time"),
   scheduledTime: text("scheduled_time"),
   metadata: text("metadata"),
   createdAt: timestamp("created_at").defaultNow().notNull(),

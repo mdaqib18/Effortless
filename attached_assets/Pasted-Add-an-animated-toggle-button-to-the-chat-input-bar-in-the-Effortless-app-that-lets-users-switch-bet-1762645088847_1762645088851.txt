@@ -1,0 +1,85 @@
+Add an animated toggle button to the chat input bar in the Effortless app that lets users switch between “Task” (one-time) and “Routine” (recurring automation).
+
+💬 UI Behavior
+
+Place the toggle inside the chat input bar, left of the text field.
+
+Default state: “Task” (toggle off).
+
+When toggled on → label and icon change to “Routine 🔁”.
+
+The chat bubble or AI response should reflect this:
+
+Example (toggle off): “One-time task created ✅”
+
+Example (toggle on): “Routine automation scheduled 🔁.”
+
+🎨 Visual Design
+
+Use Framer Motion for smooth spring animation (scale + glow on toggle).
+
+Style the toggle like a pill switch:
+
+Off → gray background (bg-gray-800 text-gray-300)
+
+On → gradient indigo → green (from-indigo-500 to-green-400 text-white).
+
+Add icons (Lucide):
+
+“Clock” for one-time task
+
+“Repeat” for routine
+
+When active, toggle should slightly glow (shadow-[0_0_10px_rgba(99,102,241,0.5)]).
+
+Tooltip on hover:
+
+“Switch to Routine Mode” / “Switch to Task Mode.”
+
+⚙️ Functionality
+
+If toggle is OFF → any chat message creates a one-time task (taskType: "one_time").
+
+If toggle is ON → task is stored as a routine (taskType: "routine") and connected to the recurring automation logic (e.g., cron schedule).
+
+When sending the chat message, include the selected mode in the request payload:
+
+{
+  "text": "Pay my WiFi bill every month",
+  "taskType": "routine"
+}
+
+
+Update backend /api/tasks route to read taskType and handle accordingly.
+
+🧠 Backend Behavior
+
+If taskType = one_time → save task normally.
+
+If taskType = routine → auto-register it with the recurring task scheduler (node-cron).
+
+Include type field in database ("routine" or "one_time").
+
+AI responses (Gemini) should display confirmation based on toggle.
+
+💅 Extra UX Details
+
+On toggle → short haptic/sound feedback (“click.mp3”).
+
+Animate toggle icon rotation 180° when switching states.
+
+Add a hint text under chatbar:
+
+“🔁 Routine mode active — Effortless will repeat this automation automatically.”
+
+Hint fades in/out with animation when mode changes.
+
+✅ Example Flow
+
+1️⃣ User toggles on Routine mode (button glows green).
+2️⃣ Types: “Order groceries every Friday 7PM.”
+3️⃣ Sends message → Gemini parses → backend saves as routine task.
+4️⃣ Chat UI replies: “🛒 Routine order set — I’ll handle it every Friday evening.”
+5️⃣ Dashboard shows task under “Routines.”
+
+Goal: Create a seamless, animated toggle in the chat input bar that lets users switch between one-time and recurring automations. It must be functional, connected to backend logic, animated with Framer Motion, and visually aligned with the Effortless design system.
