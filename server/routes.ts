@@ -250,5 +250,130 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Payment routes for mock transaction flow
+  
+  // Initiate a payment
+  app.post("/api/payments/initiate", async (req, res) => {
+    try {
+      const { userId, taskId, amount } = req.body;
+      
+      if (!userId || !amount) {
+        return res.status(400).json({ error: "userId and amount are required" });
+      }
+
+      const payment = await storage.createPayment({
+        userId,
+        taskId,
+        amount,
+        currency: "INR",
+        status: "pending",
+        paymentMethod: "card",
+        cardLast4: "4242",
+        threeDSecureRequired: true,
+      });
+
+      io.emit('paymentUpdate', {
+        paymentId: payment.id,
+        taskId: payment.taskId,
+        status: "pending",
+        message: "Payment initiated",
+        amount: payment.amount,
+        timestamp: new Date().toISOString(),
+      });
+
+      res.json({
+        paymentId: payment.id,
+        amount: payment.amount,
+        currency: payment.currency,
+        status: payment.status,
+        threeDSecureRequired: payment.threeDSecureRequired,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Confirm payment (simulate 3D Secure)
+  app.post("/api/payments/confirm", async (req, res) => {
+    try {
+      const { paymentId } = req.body;
+      
+      if (!paymentId) {
+        return res.status(400).json({ error: "paymentId is required" });
+      }
+
+      const payment = await storage.getPayment(paymentId);
+      if (!payment) {
+        return res.status(404).json({ error: "Payment not found" });
+      }
+
+      await storage.updatePayment(paymentId, { status: "processing" });
+
+      io.emit('paymentUpdate', {
+        paymentId: payment.id,
+        taskId: payment.taskId,
+        status: "processing",
+        message: "Processing 3D Secure verification...",
+        amount: payment.amount,
+        timestamp: new Date().toISOString(),
+      });
+
+      setTimeout(async () => {
+        const success = Math.random() > 0.1;
+        const newStatus = success ? "success" : "failed";
+        const transactionId = success ? `TXN${Date.now()}${Math.random().toString(36).substr(2, 9)}`.toUpperCase() : undefined;
+
+        await storage.updatePayment(paymentId, {
+          status: newStatus,
+          transactionId,
+        });
+
+        io.emit('paymentUpdate', {
+          paymentId: payment.id,
+          taskId: payment.taskId,
+          status: newStatus,
+          message: success ? "Payment successful!" : "Payment failed. Please try again.",
+          amount: payment.amount,
+          timestamp: new Date().toISOString(),
+        });
+      }, 2000 + Math.random() * 1000);
+
+      res.json({ message: "Payment confirmation in progress" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Cancel payment
+  app.post("/api/payments/cancel", async (req, res) => {
+    try {
+      const { paymentId } = req.body;
+      
+      if (!paymentId) {
+        return res.status(400).json({ error: "paymentId is required" });
+      }
+
+      const payment = await storage.getPayment(paymentId);
+      if (!payment) {
+        return res.status(404).json({ error: "Payment not found" });
+      }
+
+      await storage.updatePayment(paymentId, { status: "cancelled" });
+
+      io.emit('paymentUpdate', {
+        paymentId: payment.id,
+        taskId: payment.taskId,
+        status: "cancelled",
+        message: "Payment cancelled by user",
+        amount: payment.amount,
+        timestamp: new Date().toISOString(),
+      });
+
+      res.json({ message: "Payment cancelled successfully" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   return httpServer;
 }
