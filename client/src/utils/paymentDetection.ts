@@ -1,25 +1,11 @@
 export function requiresPayment(prompt: string, taskType?: string): boolean {
-  const lower = prompt.toLowerCase();
-  
-  const paymentKeywords = [
-    "pay",
-    "bill",
-    "order",
-    "subscription",
-    "purchase",
-    "buy",
-    "booking",
-    "book",
-    "recharge",
-    "top up",
-    "topup",
-  ];
-  
-  const keywordMatch = paymentKeywords.some(keyword => lower.includes(keyword));
-  
+  if (taskType === "reminder") {
+    return false;
+  }
+
   const taskTypeMatch = taskType ? ["bill", "cab", "grocery", "food"].includes(taskType) : false;
   
-  return keywordMatch || taskTypeMatch;
+  return taskTypeMatch;
 }
 
 export function extractAmount(prompt: string, taskType?: string): number {
