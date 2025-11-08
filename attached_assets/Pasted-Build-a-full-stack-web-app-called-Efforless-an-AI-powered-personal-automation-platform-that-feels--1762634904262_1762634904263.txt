@@ -1,0 +1,159 @@
+Build a full-stack web app called Efforless — an AI-powered personal automation platform that feels like a living system, not just an app.
+
+Efforless lets users type or say natural prompts like:
+
+“Book a cab from Indiranagar to Koramangala.”
+
+“Order groceries every Friday at 7 PM.”
+
+“Pay my WiFi bill every 10th.”
+
+“Remind me to send a report at 8 PM.”
+
+The Gemini API interprets each prompt into structured JSON ({action, task_type, time, recurrence, category, payment_required}), the backend mock server executes realistic simulations (with Socket.io-driven live updates), and the frontend renders cinematic UI transitions with functional icons, loading states, and alarm-like notifications.
+
+⚙️ Tech Stack
+
+Frontend: React + Vite + Tailwind CSS + Framer Motion + Socket.io-client
+
+Backend: Node.js (Express) + Socket.io + node-cron + Gemini API
+
+Auth: Firebase Authentication (Google + Email/Password)
+
+Data: In-memory / JSON mock storage
+
+🔌 Mock Automation APIs (Realistic + Live)
+
+Simulate real-world behavior for each automation type with multi-phase updates, random delays, and live notifications:
+
+/api/cab/book → lifecycle: request → driver found → driver en route → ride started → completed (emit progress updates every few seconds). Include driver name, photo, car, rating, ETA, and distance tracking.
+
+/api/bill/pay → simulate pending → processing → success ✅ or failed ❌ with delay. Include realistic providers (Airtel, BESCOM, Jio).
+
+/api/grocery/order → create random cart, store, and items; simulate order confirmed → packed → out for delivery → delivered.
+
+/api/food/order → simulate restaurant prep → rider pickup → on the way → delivered.
+
+/api/reminder/create → schedule alarm-style popup via cron; trigger sound, vibration, and countdown.
+
+/api/payments/initiate → open mock 3D Secure iframe page; confirm payment → emit “Payment successful 💳”.
+
+Every endpoint should emit Socket.io update events (e.g., “driver ETA updated”, “delivery 2 stops away”).
+Each response should feel live — include timestamps, changing statuses, and real names.
+
+🧠 AI Layer (Gemini)
+
+Parse natural prompts into structured automation JSON.
+
+Detect intent (book, order, pay, remind, schedule).
+
+Extract entities: platform, time, frequency, cost, and category.
+
+Handle clarifications: e.g., “Which provider?” → show options.
+
+Use Gemini-Pro for conversational replies and confirmations.
+
+Example:
+
+{
+ "task_type": "routine",
+ "action": "pay_wifi_bill",
+ "platform": "Airtel",
+ "time": "10th each month",
+ "confirmation_required": true
+}
+
+💬 Frontend Requirements
+
+Chat Interface:
+
+Floating AI chat with typing animation, pulsing dots, and voice mic.
+
+Smooth conversation transitions (Framer spring easing).
+
+Cards slide in for detected actions (e.g., “Detected grocery order 🛒”).
+
+Include loading shimmer + confetti for completed actions.
+
+Dashboard:
+
+Glassmorphic task cards, categorized by type (🚕 cabs, 🛒 groceries, 💳 bills, 🍔 food, ⏰ reminders).
+
+Live progress bar + status icons that update in real-time.
+
+Hover effects, ripple animations, clickable icons for Run ▶️, Pause ⏸, Edit ✏️, Delete 🗑.
+
+Animated tabs: Active, Routine, Completed.
+
+Notifications:
+
+Alarm-like popups: full-screen translucent modal with countdown, sound, vibration, and options [Proceed ✅] [Snooze 💤] [Dismiss ❌].
+
+Use Framer Motion slide-up with scale pulse.
+
+Auto-dismiss when timer ends or action executes.
+
+Sign In / Sign Up:
+
+Firebase Auth with animated transitions.
+
+Fields glow on focus, button ripple effect.
+
+Show “Welcome back, Aqib 👋” after login.
+
+Loading Animations:
+
+Animated skeletons for cards, shimmer placeholders while AI processes.
+
+Animated circular loaders for API calls.
+
+Confetti burst and bounce-in for successful tasks.
+
+Micro-interactions:
+
+Hover glow on clickable icons.
+
+Button press depth animation.
+
+Gradient shifts on status updates.
+
+🎨 Visual & Motion Language
+
+Design vibe: futuristic, clean, ambient — Notion × Framer × Apple Clock.
+
+Color palette:
+
+Indigo #6366F1 (primary)
+
+Green #22C55E (success)
+
+Dark base #0F172A
+
+Soft glow accents rgba(99,102,241,0.3)
+
+Typography: Inter / Manrope / Satoshi
+
+Icons: Lucide / Remix — every icon must perform its function.
+
+Motion: smooth 0.4–0.8s transitions, spring easing, subtle parallax.
+
+🧩 Architecture
+/frontend
+  ├─ src/pages/{Login,Signup,Chat,Dashboard,Settings}.jsx
+  ├─ components/{ChatBubble,TaskCard,NotificationPopup,LoadingSpinner}.jsx
+/server
+  ├─ routes/{auth,cab,bill,grocery,food,reminder,payment}.js
+  ├─ gemini.js
+  └─ server.js (Express + Socket.io + cron)
+.env (GEMINI_API_KEY, FIREBASE config)
+
+🎬 Demo Flow
+
+1️⃣ User logs in → “Good evening, Aqib 🌙.”
+2️⃣ Prompt: “Book a cab to office.” → AI card appears → “Driver Rahul in Swift Dzire arriving in 6 mins.”
+3️⃣ Live cab updates every few seconds via Socket.io.
+4️⃣ Dashboard card animates with ETA bar.
+5️⃣ Alarm popup triggers for reminder tasks → sound + countdown + action buttons.
+6️⃣ Successful task → confetti + smooth toast (“Task done effortlessly ✅”).
+
+Goal: Build a real-time, aesthetic, intelligent automation platform that looks like a real product launch — every icon functional, every action animated, every task alive.
