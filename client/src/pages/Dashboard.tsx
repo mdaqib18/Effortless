@@ -12,7 +12,7 @@ import { TaskCard } from "@/components/TaskCard";
 import { NotificationPopup } from "@/components/NotificationPopup";
 import { Confetti } from "@/components/Confetti";
 import { LoadingSkeleton } from "@/components/LoadingSpinner";
-import { LogOut, Plus, MessageSquare } from "lucide-react";
+import { LogOut, Plus, MessageSquare, Settings as SettingsIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { createSocketConnection } from "@/lib/socket";
 import type { Task, Reminder, TaskUpdate } from "@shared/schema";
@@ -217,6 +217,14 @@ export default function Dashboard() {
             >
               <MessageSquare className="h-5 w-5 mr-2" />
               {showChat ? "Hide Chat" : "AI Chat"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setLocation("/settings")}
+              data-testid="button-settings"
+            >
+              <SettingsIcon className="h-5 w-5 mr-2" />
+              Settings
             </Button>
             <Button
               variant="outline"

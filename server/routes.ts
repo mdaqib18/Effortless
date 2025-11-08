@@ -216,5 +216,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get user settings
+  app.get("/api/settings", async (req, res) => {
+    try {
+      const userId = req.query.userId as string;
+      if (!userId) {
+        return res.status(400).json({ error: "userId is required" });
+      }
+      const settings = await storage.getUserSettings(userId);
+      if (!settings) {
+        return res.json({
+          userId,
+          emailNotifications: true,
+          smsNotifications: false,
+          soundEnabled: true,
+          reminderLeadTime: 15,
+          autoRunEnabled: true,
+        });
+      }
+      res.json(settings);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update user settings
+  app.post("/api/settings", async (req, res) => {
+    try {
+      const settings = await storage.createOrUpdateUserSettings(req.body);
+      res.json(settings);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   return httpServer;
 }

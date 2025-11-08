@@ -34,6 +34,38 @@ export const insertTaskSchema = createInsertSchema(tasks).omit({
 export type InsertTask = z.infer<typeof insertTaskSchema>;
 export type Task = typeof tasks.$inferSelect;
 
+// User settings table
+export const userSettings = pgTable("user_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().unique(),
+  
+  emailNotifications: boolean("email_notifications").default(true),
+  smsNotifications: boolean("sms_notifications").default(false),
+  soundEnabled: boolean("sound_enabled").default(true),
+  reminderLeadTime: integer("reminder_lead_time").default(15),
+  
+  preferredCabService: text("preferred_cab_service"),
+  preferredPaymentGateway: text("preferred_payment_gateway"),
+  preferredGroceryStore: text("preferred_grocery_store"),
+  preferredFoodService: text("preferred_food_service"),
+  
+  quietHoursStart: text("quiet_hours_start"),
+  quietHoursEnd: text("quiet_hours_end"),
+  autoRunEnabled: boolean("auto_run_enabled").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertUserSettingsSchema = createInsertSchema(userSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertUserSettings = z.infer<typeof insertUserSettingsSchema>;
+export type UserSettings = typeof userSettings.$inferSelect;
+
 // Task status updates for real-time tracking
 export interface TaskUpdate {
   taskId: string;
