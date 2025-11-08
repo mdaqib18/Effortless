@@ -104,9 +104,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all tasks for a user
   app.get("/api/tasks", async (req, res) => {
     try {
-      // In a real app, get userId from auth session
-      // For demo, using a dummy userId
-      const userId = req.query.userId as string || "demo-user";
+      const userId = req.query.userId as string;
+      if (!userId) {
+        return res.status(400).json({ error: "userId is required" });
+      }
       const tasks = await storage.getTasksByUser(userId);
       res.json(tasks);
     } catch (error: any) {

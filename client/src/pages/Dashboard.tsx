@@ -91,7 +91,7 @@ export default function Dashboard() {
   }, [user, toast]);
 
   const { data: tasks = [], isLoading } = useQuery<Task[]>({
-    queryKey: ["/api/tasks"],
+    queryKey: ["/api/tasks", user?.uid],
     enabled: !!user,
   });
 
@@ -149,7 +149,7 @@ export default function Dashboard() {
 
       if (response.taskType && !response.clarification) {
         const createdTask = await createTaskMutation.mutateAsync({
-          userId: "demo-user",
+          userId: user.uid,
           taskType: response.taskType,
           action: response.action,
           prompt: message,
