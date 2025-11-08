@@ -1,5 +1,6 @@
-import { type Task, type InsertTask } from "@shared/schema";
-import { randomUUID } from "crypto";
+import { type Task, type InsertTask, tasks } from "@shared/schema";
+import { eq } from "drizzle-orm";
+import { db } from "./db";
 
 export interface IStorage {
   // Task operations
@@ -10,52 +11,34 @@ export interface IStorage {
   deleteTask(id: string): Promise<boolean>;
 }
 
-export class MemStorage implements IStorage {
-  private tasks: Map<string, Task>;
-
-  constructor() {
-    this.tasks = new Map();
-  }
-
+export class DbStorage implements IStorage {
   async getTask(id: string): Promise<Task | undefined> {
-    return this.tasks.get(id);
+    const result = await db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
+    return result[0];
   }
 
   async getTasksByUser(userId: string): Promise<Task[]> {
-    return Array.from(this.tasks.values()).filter(
-      (task) => task.userId === userId,
-    );
+    return await db.select().from(tasks).where(eq(tasks.userId, userId));
   }
 
   async createTask(insertTask: InsertTask): Promise<Task> {
-    const id = randomUUID();
-    const now = new Date();
-    const task: Task = {
-      ...insertTask,
-      id,
-      createdAt: now,
-      updatedAt: now,
-    };
-    this.tasks.set(id, task);
-    return task;
+    const result = await db.insert(tasks).values(insertTask).returning();
+    return result[0];
   }
 
   async updateTask(id: string, updates: Partial<Task>): Promise<Task | undefined> {
-    const task = this.tasks.get(id);
-    if (!task) return undefined;
-
-    const updatedTask: Task = {
-      ...task,
-      ...updates,
-      updatedAt: new Date(),
-    };
-    this.tasks.set(id, updatedTask);
-    return updatedTask;
+    const result = await db
+      .update(tasks)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(tasks.id, id))
+      .returning();
+    return result[0];
   }
 
   async deleteTask(id: string): Promise<boolean> {
-    return this.tasks.delete(id);
+    const result = await db.delete(tasks).where(eq(tasks.id, id)).returning();
+    return result.length > 0;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DbStorage();
