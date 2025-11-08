@@ -7,6 +7,8 @@ import { z } from "zod";
 export const taskTypes = ["cab", "bill", "grocery", "food", "reminder"] as const;
 export const taskStatuses = ["pending", "active", "completed", "failed", "cancelled"] as const;
 export const recurrenceTypes = ["once", "daily", "weekly", "monthly"] as const;
+export const paymentStatuses = ["pending", "processing", "3ds_required", "success", "failed", "cancelled"] as const;
+export const paymentMethods = ["card", "upi", "netbanking", "wallet"] as const;
 
 // Automation tasks table
 export const tasks = pgTable("tasks", {
@@ -66,6 +68,31 @@ export const insertUserSettingsSchema = createInsertSchema(userSettings).omit({
 export type InsertUserSettings = z.infer<typeof insertUserSettingsSchema>;
 export type UserSettings = typeof userSettings.$inferSelect;
 
+// Payments table for mock transaction tracking
+export const payments = pgTable("payments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  taskId: varchar("task_id"),
+  amount: integer("amount").notNull(),
+  currency: varchar("currency", { length: 3 }).default("INR"),
+  status: text("status").notNull().default("pending"),
+  paymentMethod: text("payment_method").default("card"),
+  cardLast4: varchar("card_last4", { length: 4 }).default("4242"),
+  transactionId: varchar("transaction_id"),
+  threeDSecureRequired: boolean("three_d_secure_required").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertPaymentSchema = createInsertSchema(payments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertPayment = z.infer<typeof insertPaymentSchema>;
+export type Payment = typeof payments.$inferSelect;
+
 // Task status updates for real-time tracking
 export interface TaskUpdate {
   taskId: string;
@@ -73,6 +100,16 @@ export interface TaskUpdate {
   message: string;
   progress?: number;
   metadata?: any;
+  timestamp: string;
+}
+
+// Payment status updates for real-time tracking
+export interface PaymentUpdate {
+  paymentId: string;
+  taskId?: string;
+  status: "pending" | "processing" | "3ds_required" | "success" | "failed" | "cancelled";
+  message: string;
+  amount?: number;
   timestamp: string;
 }
 

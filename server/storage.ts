@@ -1,4 +1,4 @@
-import { type Task, type InsertTask, tasks, type UserSettings, type InsertUserSettings, userSettings } from "@shared/schema";
+import { type Task, type InsertTask, tasks, type UserSettings, type InsertUserSettings, userSettings, type Payment, type InsertPayment, payments } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { db } from "./db";
 
@@ -13,6 +13,13 @@ export interface IStorage {
   // User settings operations
   getUserSettings(userId: string): Promise<UserSettings | undefined>;
   createOrUpdateUserSettings(settings: InsertUserSettings): Promise<UserSettings>;
+  
+  // Payment operations
+  getPayment(id: string): Promise<Payment | undefined>;
+  getPaymentsByUser(userId: string): Promise<Payment[]>;
+  createPayment(payment: InsertPayment): Promise<Payment>;
+  updatePayment(id: string, updates: Partial<Payment>): Promise<Payment | undefined>;
+  deletePayment(id: string): Promise<boolean>;
 }
 
 export class DbStorage implements IStorage {
@@ -68,6 +75,34 @@ export class DbStorage implements IStorage {
       const result = await db.insert(userSettings).values(settingsData).returning();
       return result[0];
     }
+  }
+  
+  async getPayment(id: string): Promise<Payment | undefined> {
+    const result = await db.select().from(payments).where(eq(payments.id, id)).limit(1);
+    return result[0];
+  }
+  
+  async getPaymentsByUser(userId: string): Promise<Payment[]> {
+    return await db.select().from(payments).where(eq(payments.userId, userId));
+  }
+  
+  async createPayment(insertPayment: InsertPayment): Promise<Payment> {
+    const result = await db.insert(payments).values(insertPayment).returning();
+    return result[0];
+  }
+  
+  async updatePayment(id: string, updates: Partial<Payment>): Promise<Payment | undefined> {
+    const result = await db
+      .update(payments)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(payments.id, id))
+      .returning();
+    return result[0];
+  }
+  
+  async deletePayment(id: string): Promise<boolean> {
+    const result = await db.delete(payments).where(eq(payments.id, id)).returning();
+    return result.length > 0;
   }
 }
 
