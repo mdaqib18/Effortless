@@ -66,7 +66,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return {
         taskType: "cab",
         action: "book_cab",
-        reply: "I'll book a cab for you right away!",
+        reply: "I can book a cab to the airport for you.",
+        recurrence: "once",
       };
     } else if (lower.includes("bill") || lower.includes("pay") || lower.includes("wifi") || lower.includes("electricity")) {
       return {
@@ -74,24 +75,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         action: "pay_bill",
         platform: "Airtel",
         reply: "I'll help you pay that bill!",
+        recurrence: "once",
       };
     } else if (lower.includes("grocery") || lower.includes("groceries")) {
       return {
         taskType: "grocery",
         action: "order_groceries",
         reply: "I'll schedule a grocery order for you!",
+        recurrence: "once",
       };
     } else if (lower.includes("food") || lower.includes("order food") || lower.includes("pizza") || lower.includes("burger")) {
       return {
         taskType: "food",
         action: "order_food",
         reply: "I'll order food for you!",
+        recurrence: "once",
       };
     } else {
       return {
         taskType: "reminder",
         action: "create_reminder",
         reply: "I'll set a reminder for you!",
+        recurrence: "once",
       };
     }
   }

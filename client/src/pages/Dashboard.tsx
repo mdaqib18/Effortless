@@ -148,8 +148,8 @@ export default function Dashboard() {
       setMessages((prev) => [...prev, assistantMessage]);
 
       if (response.taskType && !response.clarification) {
-        await createTaskMutation.mutateAsync({
-          userId: user.uid,
+        const createdTask = await createTaskMutation.mutateAsync({
+          userId: "demo-user",
           taskType: response.taskType,
           action: response.action,
           prompt: message,
@@ -162,13 +162,17 @@ export default function Dashboard() {
 
         toast({
           title: "Task created successfully",
-          description: "Your automation is ready to run",
+          description: "Your automation is starting now...",
         });
+
+        if (createdTask && createdTask.id) {
+          await runTaskMutation.mutateAsync(createdTask.id);
+        }
       }
     } catch (error: any) {
       toast({
         title: "Failed to process request",
-        description: error.message,
+        description: error.message || String(error),
         variant: "destructive",
       });
     } finally {
