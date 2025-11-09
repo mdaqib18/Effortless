@@ -289,4 +289,45 @@
   .border.hover-elevate:not(.no-hover-interaction-elevate)::after {
     inset: -1px;
   }
+
+  /* Glassmorphism utility classes */
+  .glass-surface {
+    @apply bg-card/30 backdrop-blur-xl border border-card-border/50;
+  }
+
+  .glass-card {
+    @apply bg-card/40 backdrop-blur-lg border border-card-border/60 shadow-lg;
+  }
+
+  .glass-header {
+    @apply bg-card/20 backdrop-blur-md border-b border-border/40;
+  }
+
+  /* Glow effects */
+  .glow-primary {
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+  }
+
+  .glow-primary-sm {
+    box-shadow: 0 0 10px rgba(99, 102, 241, 0.2);
+  }
+
+  .glow-emerald {
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+  }
+
+  .glow-emerald-sm {
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+  }
+
+  /* Hover glow effects */
+  .hover-glow-primary:hover {
+    box-shadow: 0 0 25px rgba(99, 102, 241, 0.4);
+    transition: box-shadow 0.3s ease;
+  }
+
+  .hover-glow-emerald:hover {
+    box-shadow: 0 0 25px rgba(16, 185, 129, 0.4);
+    transition: box-shadow 0.3s ease;
+  }
 }

@@ -14,10 +14,14 @@ import { Confetti } from "@/components/Confetti";
 import { LoadingSkeleton } from "@/components/LoadingSpinner";
 import { PaymentModal } from "@/components/PaymentModal";
 import { ThreeDSecureModal } from "@/components/ThreeDSecureModal";
-import { LogOut, Plus, MessageSquare, Settings as SettingsIcon } from "lucide-react";
+import { AnimatedBackground } from "@/components/AnimatedBackground";
+import { MetricsBar } from "@/components/MetricsBar";
+import { OnboardingState } from "@/components/OnboardingState";
+import { LogOut, Plus, MessageSquare, Settings as SettingsIcon, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { createSocketConnection } from "@/lib/socket";
 import { requiresPayment, extractAmount } from "@/utils/paymentDetection";
+import { triggerTaskCreationConfetti } from "@/lib/motionPresets";
 import type { Task, Reminder, TaskUpdate, PaymentUpdate } from "@shared/schema";
 
 interface Message {
@@ -65,7 +69,7 @@ export default function Dashboard() {
         const hour = new Date().getHours();
         const greeting = hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening";
         toast({
-          title: `Good ${greeting}, ${user.displayName || user.email}! 🌟`,
+          title: `Good ${greeting}, ${user.displayName || user.email}!`,
           description: "Ready to automate your tasks effortlessly",
         });
       }
@@ -86,7 +90,7 @@ export default function Dashboard() {
       if (data.status === "completed") {
         setShowConfetti(true);
         toast({
-          title: "Task completed effortlessly ✅",
+          title: "Task completed effortlessly",
           description: data.message,
         });
         queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
@@ -173,6 +177,8 @@ export default function Dashboard() {
         ? "Effortless will handle this automatically"
         : "Your automation is starting now...";
 
+      triggerTaskCreationConfetti();
+      
       toast({
         title: successMessage,
         description: descriptionMessage,
@@ -357,6 +363,8 @@ export default function Dashboard() {
             ? "Effortless will handle this automatically"
             : "Your automation is starting now...";
 
+          triggerTaskCreationConfetti();
+
           toast({
             title: successMessage,
             description: descriptionMessage,
@@ -402,22 +410,36 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="flex h-screen flex-col bg-background">
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm">
+    <div className="flex h-screen flex-col bg-background relative">
+      <AnimatedBackground />
+      
+      <header className="glass-header relative z-10">
         <div className="flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/50 shadow-lg shadow-primary/50">
-              <span className="text-xl">✨</span>
-            </div>
+          <motion.div 
+            className="flex items-center gap-3"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+          >
+            <motion.div 
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary to-emerald-500 glow-primary-sm"
+              whileHover={{ scale: 1.1, rotate: 180 }}
+              transition={{ type: "spring", stiffness: 300, damping: 15 }}
+            >
+              <Sparkles className="h-5 w-5 text-white" />
+            </motion.div>
             <div>
               <h1 className="text-xl font-bold text-foreground">Effortless</h1>
               <p className="text-sm text-muted-foreground">
                 {user.displayName || user.email}
               </p>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="flex items-center gap-2">
+          <motion.div 
+            className="flex items-center gap-2"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+          >
             <Button
               variant="outline"
               onClick={() => setShowChat(!showChat)}
@@ -442,48 +464,89 @@ export default function Dashboard() {
               <LogOut className="h-5 w-5 mr-2" />
               Sign Out
             </Button>
-          </div>
+          </motion.div>
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
         <main className="flex-1 overflow-y-auto p-6">
           <div className="mx-auto max-w-7xl space-y-6">
+            <MetricsBar 
+              userName={user.displayName || user.email?.split('@')[0]}
+              activeCount={activeTasks.length}
+              routineCount={routineTasks.length}
+              completedCount={completedTasks.length}
+            />
+
             <div className="flex items-center justify-between">
-              <div>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
                 <h2 className="text-3xl font-bold text-foreground">Your Automations</h2>
                 <p className="text-muted-foreground mt-1">
                   Manage and monitor all your automated tasks
                 </p>
-              </div>
-              <Button onClick={() => setShowChat(true)} data-testid="button-new-task">
-                <Plus className="h-5 w-5 mr-2" />
-                New Task
-              </Button>
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.3, type: "spring", stiffness: 300 }}
+              >
+                <Button 
+                  onClick={() => setShowChat(true)} 
+                  data-testid="button-new-task"
+                >
+                  <Plus className="h-5 w-5 mr-2" />
+                  New Task
+                </Button>
+              </motion.div>
             </div>
 
             <Tabs defaultValue="active" className="w-full">
-              <TabsList className="w-full justify-start border-b border-border bg-transparent p-0">
+              <TabsList className="w-full justify-start border-b border-border/40 bg-transparent p-0 relative">
                 <TabsTrigger
                   value="active"
-                  className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
+                  className="data-[state=active]:text-primary data-[state=active]:glow-primary-sm rounded-none relative px-6 py-3 transition-all hover-glow-primary"
                   data-testid="tab-active"
                 >
-                  Active ({activeTasks.length})
+                  <motion.span
+                    className="relative z-10"
+                    whileHover={{ scale: 1.05 }}
+                  >
+                    Active ({activeTasks.length})
+                  </motion.span>
+                  <motion.div
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary to-emerald-500"
+                    initial={{ scaleX: 0 }}
+                    animate={{ scaleX: 1 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  />
                 </TabsTrigger>
                 <TabsTrigger
                   value="routine"
-                  className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
+                  className="data-[state=active]:text-emerald-400 data-[state=active]:glow-emerald-sm rounded-none relative px-6 py-3 transition-all hover-glow-emerald"
                   data-testid="tab-routine"
                 >
-                  Routine ({routineTasks.length})
+                  <motion.span
+                    className="relative z-10"
+                    whileHover={{ scale: 1.05 }}
+                  >
+                    Routine ({routineTasks.length})
+                  </motion.span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="completed"
-                  className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
+                  className="data-[state=active]:text-blue-400 rounded-none relative px-6 py-3 transition-all"
                   data-testid="tab-completed"
                 >
-                  Completed ({completedTasks.length})
+                  <motion.span
+                    className="relative z-10"
+                    whileHover={{ scale: 1.05 }}
+                  >
+                    Completed ({completedTasks.length})
+                  </motion.span>
                 </TabsTrigger>
               </TabsList>
 
@@ -494,29 +557,27 @@ export default function Dashboard() {
                   <>
                     <TabsContent value="active" className="mt-0">
                       {activeTasks.length === 0 ? (
-                        <div className="text-center py-12">
-                          <p className="text-muted-foreground">No active tasks yet</p>
-                          <Button
-                            onClick={() => setShowChat(true)}
-                            variant="outline"
-                            className="mt-4"
-                            data-testid="button-create-first"
-                          >
-                            Create your first task
-                          </Button>
-                        </div>
+                        <OnboardingState onCreateTask={() => setShowChat(true)} />
                       ) : (
                         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                           <AnimatePresence>
-                            {activeTasks.map((task) => (
-                              <TaskCard
+                            {activeTasks.map((task, index) => (
+                              <motion.div
                                 key={task.id}
-                                task={task}
-                                progress={taskUpdates[task.id]?.progress || 0}
-                                metadata={taskUpdates[task.id]?.metadata}
-                                onPause={() => toast({ title: "Task paused" })}
-                                onDelete={() => deleteTaskMutation.mutate(task.id)}
-                              />
+                                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.9, y: -20 }}
+                                transition={{ delay: index * 0.05 }}
+                                whileHover={{ scale: 1.02, y: -4 }}
+                              >
+                                <TaskCard
+                                  task={task}
+                                  progress={taskUpdates[task.id]?.progress || 0}
+                                  metadata={taskUpdates[task.id]?.metadata}
+                                  onPause={() => toast({ title: "Task paused" })}
+                                  onDelete={() => deleteTaskMutation.mutate(task.id)}
+                                />
+                              </motion.div>
                             ))}
                           </AnimatePresence>
                         </div>
@@ -525,19 +586,34 @@ export default function Dashboard() {
 
                     <TabsContent value="routine" className="mt-0">
                       {routineTasks.length === 0 ? (
-                        <div className="text-center py-12">
-                          <p className="text-muted-foreground">No routine tasks yet</p>
-                        </div>
+                        <motion.div 
+                          className="text-center py-16"
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                        >
+                          <p className="text-muted-foreground text-lg">No routine tasks yet</p>
+                          <p className="text-sm text-muted-foreground/60 mt-2">
+                            Set up recurring automations to save time
+                          </p>
+                        </motion.div>
                       ) : (
                         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                           <AnimatePresence>
-                            {routineTasks.map((task) => (
-                              <TaskCard
+                            {routineTasks.map((task, index) => (
+                              <motion.div
                                 key={task.id}
-                                task={task}
-                                onRun={() => runTaskMutation.mutate(task.id)}
-                                onDelete={() => deleteTaskMutation.mutate(task.id)}
-                              />
+                                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.9, y: -20 }}
+                                transition={{ delay: index * 0.05 }}
+                                whileHover={{ scale: 1.02, y: -4 }}
+                              >
+                                <TaskCard
+                                  task={task}
+                                  onRun={() => runTaskMutation.mutate(task.id)}
+                                  onDelete={() => deleteTaskMutation.mutate(task.id)}
+                                />
+                              </motion.div>
                             ))}
                           </AnimatePresence>
                         </div>
@@ -546,18 +622,33 @@ export default function Dashboard() {
 
                     <TabsContent value="completed" className="mt-0">
                       {completedTasks.length === 0 ? (
-                        <div className="text-center py-12">
-                          <p className="text-muted-foreground">No completed tasks yet</p>
-                        </div>
+                        <motion.div 
+                          className="text-center py-16"
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                        >
+                          <p className="text-muted-foreground text-lg">No completed tasks yet</p>
+                          <p className="text-sm text-muted-foreground/60 mt-2">
+                            Completed tasks will appear here
+                          </p>
+                        </motion.div>
                       ) : (
                         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                           <AnimatePresence>
-                            {completedTasks.map((task) => (
-                              <TaskCard
+                            {completedTasks.map((task, index) => (
+                              <motion.div
                                 key={task.id}
-                                task={task}
-                                onDelete={() => deleteTaskMutation.mutate(task.id)}
-                              />
+                                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.9, y: -20 }}
+                                transition={{ delay: index * 0.05 }}
+                                whileHover={{ scale: 1.02, y: -4 }}
+                              >
+                                <TaskCard
+                                  task={task}
+                                  onDelete={() => deleteTaskMutation.mutate(task.id)}
+                                />
+                              </motion.div>
                             ))}
                           </AnimatePresence>
                         </div>
