@@ -11,6 +11,9 @@ export interface ParsedPrompt {
   time?: string;
   recurrence?: string;
   category?: string;
+  items?: Array<{ name: string; quantity?: number; price?: number }>;
+  needsItems?: boolean;
+  followUp?: boolean;
   confirmationRequired?: boolean;
   clarification?: string;
   reply?: string;
@@ -19,33 +22,46 @@ export interface ParsedPrompt {
 export async function parseAutomationPrompt(prompt: string): Promise<ParsedPrompt> {
   try {
     const systemPrompt = `You are an AI assistant for an automation platform called Effortless. 
-Parse user prompts into structured automation tasks. Detect the task type (cab, bill, grocery, food, reminder), 
-action, platform/provider, time, recurrence, and category.
+Parse user prompts into structured automation tasks and support multi-step conversational ordering.
 
 Task types:
 - cab: Book rides (Uber, Ola, etc.)
 - bill: Pay bills (WiFi, electricity, water, etc.)
-- grocery: Order groceries
-- food: Order food delivery
+- grocery: Order groceries (BigBasket, Instamart, Blinkit, etc.)
+- food: Order food delivery (Zomato, Swiggy, etc.)
+- medicine: Order medicines (Apollo Pharmacy, PharmEasy, etc.)
 - reminder: Set reminders and notifications
 
-Respond with JSON in this format:
+CONVERSATIONAL ORDERING FLOW:
+For grocery/food/medicine orders:
+1. If user says "order groceries/food/medicine" without items → Set needsItems=true, ask what to order
+2. If user lists items → Parse items array with {name, quantity, price (estimate)}
+3. Classify category based on keywords:
+   - grocery: "grocery", "vegetables", "milk", "bread", "essentials"
+   - food: "restaurant", "dinner", "pizza", "burger", "lunch"
+   - medicine: "tablet", "medicine", "pharmacy", "capsule", "syrup"
+
+Respond with JSON:
 {
-  "taskType": "cab" | "bill" | "grocery" | "food" | "reminder",
-  "action": "descriptive action name (e.g., 'book_cab', 'pay_wifi_bill')",
-  "platform": "platform name if mentioned (e.g., 'Airtel', 'Uber')",
+  "taskType": "cab" | "bill" | "grocery" | "food" | "medicine" | "reminder",
+  "action": "descriptive action (e.g., 'order_groceries')",
+  "platform": "platform if mentioned",
   "time": "scheduled time if mentioned",
   "recurrence": "once" | "daily" | "weekly" | "monthly",
-  "category": "category if applicable",
+  "category": "grocery" | "food" | "medicine" (for orders),
+  "items": [{"name": "item", "quantity": 1, "price": 50}] (if user provided items),
+  "needsItems": true (if order intent detected but no items listed),
+  "followUp": true (if asking for more info),
   "confirmationRequired": boolean,
-  "clarification": "question for user if info is missing",
-  "reply": "friendly response to user"
+  "clarification": "question if info missing",
+  "reply": "friendly conversational response"
 }
 
 Examples:
-- "Book a cab from Indiranagar to Koramangala" → {"taskType": "cab", "action": "book_cab", "recurrence": "once", "reply": "I'll book a cab for you..."}
-- "Pay my WiFi bill every 10th" → {"taskType": "bill", "action": "pay_wifi_bill", "platform": "WiFi", "recurrence": "monthly", "time": "10th each month", "reply": "I'll set up automatic WiFi bill payment..."}
-- "Order groceries every Friday at 7 PM" → {"taskType": "grocery", "action": "order_groceries", "recurrence": "weekly", "time": "Friday 7 PM", "reply": "I'll schedule weekly grocery orders..."}`;
+- "Order groceries" → {"taskType": "grocery", "category": "grocery", "needsItems": true, "followUp": true, "reply": "Sure! What items would you like to add to your grocery list?"}
+- "Milk, bread, and eggs" (after asking) → {"taskType": "grocery", "category": "grocery", "items": [{"name": "Milk", "quantity": 1, "price": 60}, {"name": "Bread", "quantity": 1, "price": 40}, {"name": "Eggs", "quantity": 1, "price": 84}], "reply": "Got it! I'll order Milk, Bread, and Eggs for you."}
+- "Order Paracetamol and cough syrup" → {"taskType": "medicine", "category": "medicine", "items": [{"name": "Paracetamol", "quantity": 1, "price": 15}, {"name": "Cough Syrup", "quantity": 1, "price": 120}], "reply": "I'll order these medicines from a nearby pharmacy."}
+- "Book a cab to airport" → {"taskType": "cab", "action": "book_cab", "recurrence": "once", "reply": "I'll book a cab to the airport for you."}`;
 
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
@@ -61,6 +77,19 @@ Examples:
             time: { type: "string" },
             recurrence: { type: "string" },
             category: { type: "string" },
+            items: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  name: { type: "string" },
+                  quantity: { type: "number" },
+                  price: { type: "number" },
+                },
+              },
+            },
+            needsItems: { type: "boolean" },
+            followUp: { type: "boolean" },
             confirmationRequired: { type: "boolean" },
             clarification: { type: "string" },
             reply: { type: "string" },

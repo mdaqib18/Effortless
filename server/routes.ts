@@ -63,6 +63,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mock parser for when Gemini is unavailable
   function mockParsePrompt(prompt: string) {
     const lower = prompt.toLowerCase();
+    
+    // Check for conversational ordering patterns
+    const hasItems = /milk|bread|eggs|pizza|burger|paracetamol|cough|tablet/i.test(prompt);
+    
     if (lower.includes("cab") || lower.includes("ride") || lower.includes("uber") || lower.includes("ola")) {
       return {
         taskType: "cab",
@@ -78,27 +82,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
         reply: "I'll help you pay that bill!",
         recurrence: "once",
       };
-    } else if (lower.includes("grocery") || lower.includes("groceries")) {
-      return {
-        taskType: "grocery",
-        action: "order_groceries",
-        reply: "I'll schedule a grocery order for you!",
-        recurrence: "once",
-      };
-    } else if (lower.includes("food") || lower.includes("order food") || lower.includes("pizza") || lower.includes("burger")) {
-      return {
-        taskType: "food",
-        action: "order_food",
-        reply: "I'll order food for you!",
-        recurrence: "once",
-      };
+    } else if (lower.includes("grocery") || lower.includes("groceries") || lower.includes("vegetables")) {
+      if (hasItems) {
+        const items = [];
+        if (lower.includes("milk")) items.push({ name: "Milk", quantity: 1, price: 60 });
+        if (lower.includes("bread")) items.push({ name: "Bread", quantity: 1, price: 40 });
+        if (lower.includes("eggs")) items.push({ name: "Eggs", quantity: 1, price: 84 });
+        
+        return {
+          taskType: "grocery",
+          action: "order_groceries",
+          category: "grocery",
+          items,
+          reply: `Got it! I'll order ${items.map(i => i.name).join(", ")} for you.`,
+          recurrence: "once",
+        };
+      } else {
+        return {
+          taskType: "grocery",
+          action: "order_groceries",
+          category: "grocery",
+          needsItems: true,
+          followUp: true,
+          reply: "Sure! What items would you like to add to your grocery list?",
+          recurrence: "once",
+        };
+      }
+    } else if (lower.includes("food") || lower.includes("order food") || lower.includes("pizza") || lower.includes("burger") || lower.includes("restaurant")) {
+      if (hasItems) {
+        const items = [];
+        if (lower.includes("pizza")) items.push({ name: "Pizza", quantity: 1, price: 350 });
+        if (lower.includes("burger")) items.push({ name: "Burger", quantity: 1, price: 180 });
+        
+        return {
+          taskType: "food",
+          action: "order_food",
+          category: "food",
+          items,
+          reply: `Perfect! I'll order ${items.map(i => i.name).join(", ")} for you.`,
+          recurrence: "once",
+        };
+      } else {
+        return {
+          taskType: "food",
+          action: "order_food",
+          category: "food",
+          needsItems: true,
+          followUp: true,
+          reply: "Sure! What would you like to order?",
+          recurrence: "once",
+        };
+      }
     } else if (lower.includes("medicine") || lower.includes("tablet") || lower.includes("pharmacy") || lower.includes("capsule") || lower.includes("syrup")) {
-      return {
-        taskType: "medicine",
-        action: "order_medicine",
-        reply: "I'll order medicines for you from a nearby pharmacy!",
-        recurrence: "once",
-      };
+      if (hasItems) {
+        const items = [];
+        if (lower.includes("paracetamol")) items.push({ name: "Paracetamol", quantity: 1, price: 15 });
+        if (lower.includes("cough")) items.push({ name: "Cough Syrup", quantity: 1, price: 120 });
+        
+        return {
+          taskType: "medicine",
+          action: "order_medicine",
+          category: "medicine",
+          items,
+          reply: `I'll order ${items.map(i => i.name).join(" and ")} from a nearby pharmacy.`,
+          recurrence: "once",
+        };
+      } else {
+        return {
+          taskType: "medicine",
+          action: "order_medicine",
+          category: "medicine",
+          needsItems: true,
+          followUp: true,
+          reply: "Sure! Please list the medicines you'd like to order.",
+          recurrence: "once",
+        };
+      }
     } else {
       return {
         taskType: "reminder",
