@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Send, Mic, Sparkles, Loader2, Repeat } from "lucide-react";
+import { Send, Mic, Sparkles, Loader2, Repeat, ShoppingCart, Pizza, Pill, CreditCard, MapPin, BellRing } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TaskRoutineToggle } from "@/components/TaskRoutineToggle";
 import { ItemSelectionChips } from "@/components/ItemSelectionChips";
@@ -38,6 +38,26 @@ interface ChatInterfaceProps {
   messages: Message[];
   isProcessing: boolean;
 }
+
+const getCategoryIcon = (taskType?: string, category?: string) => {
+  const type = category || taskType;
+  switch (type) {
+    case "grocery":
+      return { icon: ShoppingCart, color: "text-green-500" };
+    case "food":
+      return { icon: Pizza, color: "text-orange-500" };
+    case "medicine":
+      return { icon: Pill, color: "text-blue-500" };
+    case "cab":
+      return { icon: MapPin, color: "text-indigo-500" };
+    case "bill":
+      return { icon: CreditCard, color: "text-yellow-500" };
+    case "reminder":
+      return { icon: BellRing, color: "text-purple-500" };
+    default:
+      return null;
+  }
+};
 
 export function ChatInterface({ onSendMessage, messages, isProcessing }: ChatInterfaceProps) {
   const [input, setInput] = useState("");
@@ -142,6 +162,21 @@ export function ChatInterface({ onSendMessage, messages, isProcessing }: ChatInt
                   )}
                   data-testid={`message-${message.role}-${message.id}`}
                 >
+                  {message.role === "assistant" && (message.category || message.actionDetected?.type) && (() => {
+                    const iconConfig = getCategoryIcon(message.actionDetected?.type, message.category);
+                    if (iconConfig) {
+                      const IconComponent = iconConfig.icon;
+                      return (
+                        <div className="flex items-start gap-2 mb-2">
+                          <IconComponent className={cn("h-4 w-4 mt-0.5", iconConfig.color)} />
+                          <span className={cn("text-xs font-medium", iconConfig.color)}>
+                            {message.category || message.actionDetected?.type}
+                          </span>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                   {message.content}
                 </div>
 
@@ -203,12 +238,41 @@ export function ChatInterface({ onSendMessage, messages, isProcessing }: ChatInt
         )}
 
         <AnimatePresence mode="wait">
-          {conversationState === "awaiting_items" && orderContext.category && (
+          {conversationState === "awaiting_items" && orderContext.category && !isProcessing && (
             <ItemSelectionChips
               category={orderContext.category}
               onConfirm={handleItemsSelected}
               onCancel={handleCancelOrder}
             />
+          )}
+
+          {isProcessing && orderContext.category && conversationState === "awaiting_items" && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="w-full"
+            >
+              <Card className="border-card-border bg-card p-6 shadow-lg">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                    <span className="text-sm text-muted-foreground">Preparing your order summary...</span>
+                  </div>
+                  <div className="space-y-2">
+                    {[1, 2, 3].map((i) => (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0.4 }}
+                        animate={{ opacity: [0.4, 0.8, 0.4] }}
+                        transition={{ repeat: Infinity, duration: 1.5, delay: i * 0.2 }}
+                        className="h-4 bg-muted rounded"
+                      />
+                    ))}
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
           )}
 
           {conversationState === "pending_confirmation" && orderContext.category && orderContext.items.length > 0 && (
