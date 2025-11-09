@@ -37,9 +37,9 @@ For grocery/food/medicine orders:
 1. If user says "order groceries/food/medicine" without items → Set needsItems=true, ask what to order
 2. If user lists items → Parse items array with {name, quantity, price (estimate)}
 3. Classify category based on keywords:
-   - grocery: "grocery", "vegetables", "milk", "bread", "essentials"
-   - food: "restaurant", "dinner", "pizza", "burger", "lunch"
-   - medicine: "tablet", "medicine", "pharmacy", "capsule", "syrup"
+   - grocery: "grocery", "groceries", "vegetables", "milk", "bread", "essentials"
+   - food: "food", "restaurant", "dinner", "pizza", "burger", "lunch", "meal", "eat"
+   - medicine: "tablet", "medicine", "pharmacy", "capsule", "syrup", "drug"
 
 Respond with JSON:
 {

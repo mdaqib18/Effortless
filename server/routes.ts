@@ -82,6 +82,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         reply: "I'll help you pay that bill!",
         recurrence: "once",
       };
+    } else if ((lower.includes("food") || lower.includes("restaurant") || lower.includes("pizza") || lower.includes("burger") || lower.includes("meal") || lower.includes("eat")) && !lower.includes("grocery") && !lower.includes("groceries")) {
+      if (hasItems) {
+        const items = [];
+        if (lower.includes("pizza")) items.push({ name: "Pizza", quantity: 1, price: 350 });
+        if (lower.includes("burger")) items.push({ name: "Burger", quantity: 1, price: 180 });
+        
+        return {
+          taskType: "food",
+          action: "order_food",
+          category: "food",
+          items,
+          reply: `Perfect! I'll order ${items.map(i => i.name).join(", ")} for you.`,
+          recurrence: "once",
+        };
+      } else {
+        return {
+          taskType: "food",
+          action: "order_food",
+          category: "food",
+          needsItems: true,
+          followUp: true,
+          reply: "Sure! What would you like to order?",
+          recurrence: "once",
+        };
+      }
     } else if (lower.includes("grocery") || lower.includes("groceries") || lower.includes("vegetables")) {
       if (hasItems) {
         const items = [];
@@ -105,31 +130,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           needsItems: true,
           followUp: true,
           reply: "Sure! What items would you like to add to your grocery list?",
-          recurrence: "once",
-        };
-      }
-    } else if (lower.includes("food") || lower.includes("order food") || lower.includes("pizza") || lower.includes("burger") || lower.includes("restaurant")) {
-      if (hasItems) {
-        const items = [];
-        if (lower.includes("pizza")) items.push({ name: "Pizza", quantity: 1, price: 350 });
-        if (lower.includes("burger")) items.push({ name: "Burger", quantity: 1, price: 180 });
-        
-        return {
-          taskType: "food",
-          action: "order_food",
-          category: "food",
-          items,
-          reply: `Perfect! I'll order ${items.map(i => i.name).join(", ")} for you.`,
-          recurrence: "once",
-        };
-      } else {
-        return {
-          taskType: "food",
-          action: "order_food",
-          category: "food",
-          needsItems: true,
-          followUp: true,
-          reply: "Sure! What would you like to order?",
           recurrence: "once",
         };
       }
