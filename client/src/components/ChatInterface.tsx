@@ -7,7 +7,7 @@ import { Send, Mic, Sparkles, Loader2, Repeat } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TaskRoutineToggle } from "@/components/TaskRoutineToggle";
 
-interface Message {
+export interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
@@ -16,10 +16,23 @@ interface Message {
     type: string;
     description: string;
   };
+  items?: Array<{ name: string; quantity?: number; price?: number }>;
+  needsItems?: boolean;
+  category?: string;
+}
+
+export type ConversationState = "idle" | "awaiting_items" | "pending_confirmation" | "completed";
+
+export interface OrderContext {
+  category?: "grocery" | "food" | "medicine";
+  items: Array<{ name: string; quantity: number; price: number }>;
+  total: number;
+  platform?: string;
+  taskType?: string;
 }
 
 interface ChatInterfaceProps {
-  onSendMessage: (message: string, taskType: "one_time" | "routine") => Promise<void>;
+  onSendMessage: (message: string, taskType: "one_time" | "routine", orderContext?: OrderContext) => Promise<void>;
   messages: Message[];
   isProcessing: boolean;
 }
@@ -27,17 +40,53 @@ interface ChatInterfaceProps {
 export function ChatInterface({ onSendMessage, messages, isProcessing }: ChatInterfaceProps) {
   const [input, setInput] = useState("");
   const [isRoutine, setIsRoutine] = useState(false);
+  const [conversationState, setConversationState] = useState<ConversationState>("idle");
+  const [orderContext, setOrderContext] = useState<OrderContext>({
+    items: [],
+    total: 0,
+  });
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  useEffect(() => {
+    const lastMessage = messages[messages.length - 1];
+    if (!lastMessage || lastMessage.role !== "assistant") return;
+
+    if (lastMessage.needsItems) {
+      setConversationState("awaiting_items");
+      setOrderContext((prev) => ({
+        ...prev,
+        category: lastMessage.category as "grocery" | "food" | "medicine" | undefined,
+      }));
+    } else if (lastMessage.items && lastMessage.items.length > 0) {
+      const total = lastMessage.items.reduce((sum, item) => sum + (item.price || 0), 0);
+      setOrderContext({
+        category: lastMessage.category as "grocery" | "food" | "medicine" | undefined,
+        items: lastMessage.items as Array<{ name: string; quantity: number; price: number }>,
+        total,
+      });
+      setConversationState("pending_confirmation");
+    } else if (conversationState !== "idle") {
+      setConversationState("completed");
+      setTimeout(() => {
+        setConversationState("idle");
+        setOrderContext({ items: [], total: 0 });
+      }, 3000);
+    }
+  }, [messages]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isProcessing) return;
 
-    await onSendMessage(input, isRoutine ? "routine" : "one_time");
+    if (conversationState === "awaiting_items" && orderContext.category) {
+      await onSendMessage(input, isRoutine ? "routine" : "one_time", orderContext);
+    } else {
+      await onSendMessage(input, isRoutine ? "routine" : "one_time");
+    }
     setInput("");
   };
 

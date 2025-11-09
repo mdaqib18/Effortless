@@ -7,7 +7,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tab";
 import { Button } from "@/components/ui/button";
-import { ChatInterface } from "@/components/ChatInterface";
+import { ChatInterface, type OrderContext } from "@/components/ChatInterface";
 import { TaskCard } from "@/components/TaskCard";
 import { NotificationPopup } from "@/components/NotificationPopup";
 import { Confetti } from "@/components/Confetti";
@@ -29,6 +29,9 @@ interface Message {
     type: string;
     description: string;
   };
+  items?: Array<{ name: string; quantity?: number; price?: number }>;
+  needsItems?: boolean;
+  category?: string;
 }
 
 export default function Dashboard() {
@@ -246,7 +249,7 @@ export default function Dashboard() {
     });
   };
 
-  const handleSendMessage = async (message: string, taskType: "one_time" | "routine") => {
+  const handleSendMessage = async (message: string, taskType: "one_time" | "routine", orderContext?: OrderContext) => {
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
@@ -257,7 +260,10 @@ export default function Dashboard() {
     setIsProcessing(true);
 
     try {
-      const response = await apiRequest("POST", "/api/ai/parse", { prompt: message });
+      const promptWithContext = orderContext?.category 
+        ? `${orderContext.category}: ${message}` 
+        : message;
+      const response = await apiRequest("POST", "/api/ai/parse", { prompt: promptWithContext });
       
       const isRoutineMode = taskType === "routine";
       const confirmationText = isRoutineMode 
@@ -273,10 +279,31 @@ export default function Dashboard() {
           type: response.taskType,
           description: response.action,
         } : undefined,
+        items: response.items,
+        needsItems: response.needsItems,
+        category: response.category,
       };
       setMessages((prev) => [...prev, assistantMessage]);
 
-      if (response.taskType && !response.clarification) {
+      if (response.taskType && !response.clarification && !response.needsItems && !response.followUp) {
+        const contextItems = orderContext?.items || [];
+        const responseItems = response.items || [];
+        const allItems = [...contextItems, ...responseItems];
+        const itemsMap = new Map();
+        allItems.forEach(item => {
+          const key = item.name.toLowerCase();
+          if (!itemsMap.has(key)) {
+            itemsMap.set(key, item);
+          } else {
+            const existing = itemsMap.get(key);
+            itemsMap.set(key, {
+              ...existing,
+              quantity: (existing.quantity || 1) + (item.quantity || 1),
+            });
+          }
+        });
+        const itemsToUse = Array.from(itemsMap.values());
+        
         const taskData = {
           userId: user.uid,
           taskType: response.taskType,
@@ -288,6 +315,7 @@ export default function Dashboard() {
           scheduledTime: response.time,
           status: "pending",
           scheduleType: taskType,
+          items: itemsToUse.length > 0 ? itemsToUse : undefined,
         };
 
         if (requiresPayment(message, response.taskType)) {
