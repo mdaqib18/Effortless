@@ -35,11 +35,18 @@ Task types:
 CONVERSATIONAL ORDERING FLOW:
 For grocery/food/medicine orders:
 1. If user says "order groceries/food/medicine" without items → Set needsItems=true, ask what to order
-2. If user lists items → Parse items array with {name, quantity, price (estimate)}
+2. If user mentions ANY items (even just "Pizza" or "Milk") → ALWAYS return items array with {name, quantity, price}
 3. Classify category based on keywords:
-   - grocery: "grocery", "groceries", "vegetables", "milk", "bread", "essentials"
-   - food: "food", "restaurant", "dinner", "pizza", "burger", "lunch", "meal", "eat"
-   - medicine: "tablet", "medicine", "pharmacy", "capsule", "syrup", "drug"
+   - grocery: "grocery", "groceries", "vegetables", "milk", "bread", "essentials", "eggs", "soap"
+   - food: "food", "restaurant", "dinner", "pizza", "burger", "lunch", "meal", "eat", "pasta"
+   - medicine: "tablet", "medicine", "pharmacy", "capsule", "syrup", "drug", "paracetamol"
+
+CRITICAL: When user says item names (Pizza, Burger, Milk, etc), you MUST return items array, NOT just a conversational reply.
+
+Price estimates (in ₹):
+- Grocery: Milk (60), Bread (40), Eggs (84), Soap (50), Toothpaste (75), Shampoo (220)
+- Food: Pizza (350), Burger (180), Pasta (250), Sandwich (120), Biryani (320), Fries (90)
+- Medicine: Paracetamol (15), Cough Syrup (120), Vitamin C (180), Band-Aid (35)
 
 Respond with JSON:
 {

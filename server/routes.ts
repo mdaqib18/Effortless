@@ -67,6 +67,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Check for conversational ordering patterns
     const hasItems = /milk|bread|eggs|pizza|burger|paracetamol|cough|tablet/i.test(prompt);
     
+    // Detect category based on items mentioned (for when user just lists items)
+    const hasGroceryItems = /milk|bread|eggs|soap|toothpaste|shampoo/i.test(prompt);
+    const hasFoodItems = /pizza|burger|pasta|sandwich/i.test(prompt);
+    const hasMedicineItems = /paracetamol|cough|vitamin|band-aid|tablet/i.test(prompt);
+    
     if (lower.includes("cab") || lower.includes("ride") || lower.includes("uber") || lower.includes("ola")) {
       return {
         taskType: "cab",
@@ -158,6 +163,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
           recurrence: "once",
         };
       }
+    } 
+    // Fallback: If user just lists items without mentioning category
+    else if (hasGroceryItems) {
+      const items = [];
+      if (lower.includes("milk")) items.push({ name: "Milk", quantity: 1, price: 60 });
+      if (lower.includes("bread")) items.push({ name: "Bread", quantity: 1, price: 40 });
+      if (lower.includes("eggs")) items.push({ name: "Eggs", quantity: 1, price: 84 });
+      if (lower.includes("soap")) items.push({ name: "Soap", quantity: 1, price: 50 });
+      if (lower.includes("toothpaste")) items.push({ name: "Toothpaste", quantity: 1, price: 75 });
+      if (lower.includes("shampoo")) items.push({ name: "Shampoo", quantity: 1, price: 220 });
+      
+      return {
+        taskType: "grocery",
+        action: "order_groceries",
+        category: "grocery",
+        items,
+        reply: `Got it! I'll order ${items.map(i => i.name).join(", ")} for you.`,
+        recurrence: "once",
+      };
+    } else if (hasFoodItems) {
+      const items = [];
+      if (lower.includes("pizza")) items.push({ name: "Pizza", quantity: 1, price: 350 });
+      if (lower.includes("burger")) items.push({ name: "Burger", quantity: 1, price: 180 });
+      if (lower.includes("pasta")) items.push({ name: "Pasta", quantity: 1, price: 250 });
+      if (lower.includes("sandwich")) items.push({ name: "Sandwich", quantity: 1, price: 120 });
+      
+      return {
+        taskType: "food",
+        action: "order_food",
+        category: "food",
+        items,
+        reply: `Perfect! I'll order ${items.map(i => i.name).join(", ")} for you.`,
+        recurrence: "once",
+      };
+    } else if (hasMedicineItems) {
+      const items = [];
+      if (lower.includes("paracetamol")) items.push({ name: "Paracetamol", quantity: 1, price: 15 });
+      if (lower.includes("cough")) items.push({ name: "Cough Syrup", quantity: 1, price: 120 });
+      if (lower.includes("vitamin")) items.push({ name: "Vitamin C", quantity: 1, price: 180 });
+      if (lower.includes("band-aid") || lower.includes("bandaid")) items.push({ name: "Band-Aid", quantity: 1, price: 35 });
+      
+      return {
+        taskType: "medicine",
+        action: "order_medicine",
+        category: "medicine",
+        items,
+        reply: `I'll order ${items.map(i => i.name).join(" and ")} from a nearby pharmacy.`,
+        recurrence: "once",
+      };
     } else {
       return {
         taskType: "reminder",

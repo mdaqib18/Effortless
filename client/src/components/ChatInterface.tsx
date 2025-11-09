@@ -74,16 +74,31 @@ export function ChatInterface({ onSendMessage, messages, isProcessing }: ChatInt
   }, [messages]);
 
   useEffect(() => {
+    console.log("🔍 [ChatInterface useEffect] Triggered", {
+      messagesCount: messages.length,
+      currentState: conversationState,
+    });
+
     const lastMessage = messages[messages.length - 1];
-    if (!lastMessage || lastMessage.role !== "assistant") return;
+    console.log("🔍 [ChatInterface useEffect] Last message:", lastMessage);
+
+    if (!lastMessage || lastMessage.role !== "assistant") {
+      console.log("🔍 [ChatInterface useEffect] Skipping - not an assistant message");
+      return;
+    }
 
     if (lastMessage.needsItems && conversationState === "idle") {
+      console.log("✅ [ChatInterface useEffect] Setting awaiting_items state");
       setConversationState("awaiting_items");
       setOrderContext((prev) => ({
         ...prev,
         category: lastMessage.category as "grocery" | "food" | "medicine" | undefined,
       }));
     } else if (lastMessage.items && lastMessage.items.length > 0 && conversationState !== "pending_confirmation") {
+      console.log("✅ [ChatInterface useEffect] Transitioning to pending_confirmation", {
+        items: lastMessage.items,
+        category: lastMessage.category,
+      });
       const total = lastMessage.items.reduce((sum, item) => sum + (item.price || 0), 0);
       setOrderContext({
         category: lastMessage.category as "grocery" | "food" | "medicine" | undefined,
@@ -91,8 +106,14 @@ export function ChatInterface({ onSendMessage, messages, isProcessing }: ChatInt
         total,
       });
       setConversationState("pending_confirmation");
+    } else {
+      console.log("⚠️ [ChatInterface useEffect] No state change", {
+        hasItems: !!lastMessage.items,
+        itemsLength: lastMessage.items?.length,
+        currentState: conversationState,
+      });
     }
-  }, [messages]);
+  }, [messages, conversationState]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,10 +133,28 @@ export function ChatInterface({ onSendMessage, messages, isProcessing }: ChatInt
 
   const handleItemsSelected = async (items: Array<{ name: string; quantity: number; price: number }>) => {
     const itemNames = items.map(i => i.name).join(", ");
+    const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    
+    console.log("📤 [handleItemsSelected] Directly transitioning to pending_confirmation", {
+      itemNames,
+      items,
+      total,
+      orderContext,
+    });
+    
+    // Directly update state with items - no need to wait for AI parser
+    setOrderContext({
+      ...orderContext,
+      items,
+      total,
+    });
+    setConversationState("pending_confirmation");
+    
+    // Send message for conversational flow (optional)
     await onSendMessage(itemNames, isRoutine ? "routine" : "one_time", {
       ...orderContext,
       items,
-      total: items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+      total,
     });
   };
 
@@ -275,16 +314,33 @@ export function ChatInterface({ onSendMessage, messages, isProcessing }: ChatInt
             </motion.div>
           )}
 
-          {conversationState === "pending_confirmation" && orderContext.category && orderContext.items.length > 0 && (
-            <OrderSummaryCard
-              category={orderContext.category}
-              items={orderContext.items}
-              total={orderContext.total}
-              onConfirm={handleConfirmOrder}
-              onAddMore={handleAddMore}
-              onCancel={handleCancelOrder}
-            />
-          )}
+          {(() => {
+            const shouldShowOrderSummary = conversationState === "pending_confirmation" && 
+                                          orderContext.category && 
+                                          orderContext.items.length > 0;
+            
+            console.log("🎯 [OrderSummaryCard render check]", {
+              conversationState,
+              hasCategory: !!orderContext.category,
+              itemsCount: orderContext.items.length,
+              shouldShowOrderSummary,
+              orderContext,
+            });
+
+            if (shouldShowOrderSummary) {
+              return (
+                <OrderSummaryCard
+                  category={orderContext.category!}
+                  items={orderContext.items}
+                  total={orderContext.total}
+                  onConfirm={handleConfirmOrder}
+                  onAddMore={handleAddMore}
+                  onCancel={handleCancelOrder}
+                />
+              );
+            }
+            return null;
+          })()}
         </AnimatePresence>
 
         <div ref={messagesEndRef} />

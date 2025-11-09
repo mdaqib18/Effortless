@@ -250,6 +250,12 @@ export default function Dashboard() {
   };
 
   const handleSendMessage = async (message: string, taskType: "one_time" | "routine", orderContext?: OrderContext) => {
+    console.log("📨 [handleSendMessage] Called with:", {
+      message,
+      taskType,
+      orderContext,
+    });
+
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
@@ -263,7 +269,10 @@ export default function Dashboard() {
       const promptWithContext = orderContext?.category 
         ? `${orderContext.category}: ${message}` 
         : message;
+      
+      console.log("🤖 [handleSendMessage] Sending to AI parser:", promptWithContext);
       const response = await apiRequest("POST", "/api/ai/parse", { prompt: promptWithContext });
+      console.log("🤖 [handleSendMessage] AI parser response:", response);
       
       const isRoutineMode = taskType === "routine";
       const confirmationText = isRoutineMode 
@@ -283,9 +292,17 @@ export default function Dashboard() {
         needsItems: response.needsItems,
         category: response.category,
       };
+      
+      console.log("💬 [handleSendMessage] Creating assistant message:", assistantMessage);
       setMessages((prev) => [...prev, assistantMessage]);
 
-      if (response.taskType && !response.clarification && !response.needsItems && !response.followUp) {
+      // Skip task creation if this is part of conversational ordering flow
+      // (i.e., AI is asking for items OR returning items that need user confirmation)
+      const isConversationalFlow = response.needsItems || response.followUp || 
+        (response.items && response.items.length > 0 && 
+         (response.category === 'grocery' || response.category === 'food' || response.category === 'medicine'));
+
+      if (response.taskType && !response.clarification && !isConversationalFlow) {
         const contextItems = orderContext?.items || [];
         const responseItems = response.items || [];
         const allItems = [...contextItems, ...responseItems];
