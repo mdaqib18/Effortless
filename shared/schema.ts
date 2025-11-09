@@ -4,7 +4,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // Task types for automation
-export const taskTypes = ["cab", "bill", "grocery", "food", "reminder"] as const;
+export const taskTypes = ["cab", "bill", "grocery", "food", "medicine", "reminder"] as const;
 export const taskStatuses = ["pending", "active", "completed", "failed", "cancelled"] as const;
 export const recurrenceTypes = ["once", "daily", "weekly", "monthly"] as const;
 export const paymentStatuses = ["pending", "processing", "3ds_required", "success", "failed", "cancelled"] as const;
@@ -51,6 +51,7 @@ export const userSettings = pgTable("user_settings", {
   preferredPaymentGateway: text("preferred_payment_gateway"),
   preferredGroceryStore: text("preferred_grocery_store"),
   preferredFoodService: text("preferred_food_service"),
+  preferredPharmacy: text("preferred_pharmacy"),
   
   quietHoursStart: text("quiet_hours_start"),
   quietHoursEnd: text("quiet_hours_end"),
@@ -170,6 +171,17 @@ export interface FoodOrder {
   totalAmount: number;
   status: "confirmed" | "preparing" | "rider_assigned" | "on_the_way" | "delivered";
   estimatedTime?: number;
+}
+
+// Medicine order details
+export interface MedicineOrder {
+  taskId: string;
+  pharmacyName: string;
+  items: Array<{ name: string; quantity: number; price: number }>;
+  totalAmount: number;
+  status: "confirmed" | "packed" | "out_for_delivery" | "delivered";
+  deliveryTime?: string;
+  prescriptionRequired?: boolean;
 }
 
 // Reminder details

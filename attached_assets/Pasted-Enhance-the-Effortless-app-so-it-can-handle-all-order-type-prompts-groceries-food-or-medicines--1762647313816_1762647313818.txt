@@ -1,0 +1,121 @@
+Enhance the Effortless app so it can handle all “order”-type prompts (groceries, food, or medicines) in a realistic conversational way.
+
+🧠 Intent Detection
+
+When Gemini detects "intent": "order", classify the category automatically using keywords:
+
+"grocery" if prompt includes “grocery”, “vegetable”, “essentials”, etc.
+
+"food" if prompt includes “restaurant”, “dinner”, “pizza”, “burger”, etc.
+
+"medicine" if prompt includes “tablet”, “medicine”, “pharmacy”, “capsule”, “syrup”, etc.
+
+Store this in a structured JSON like:
+
+{ "intent": "order", "category": "medicine", "status": "awaiting_items" }
+
+💬 Conversational Flow
+
+Step 1: User: “Order groceries.”
+→ AI: “Sure 🛒 — what items would you like to add to your grocery list?”
+
+Step 2: User lists items.
+→ AI: “Got it — ordering Milk, Bread, and Eggs. Here’s your summary 👇”
+
+Items: Milk 🥛, Bread 🍞, Eggs 🥚
+
+Estimated total: ₹230
+
+ETA: 30 mins (Instamart)
+[✅ Confirm Order] [🛒 Add More] [❌ Cancel]
+
+Step 3: If user confirms → trigger mock payment → show “✅ Order placed successfully.”
+
+💊 Medicine Flow
+
+Example:
+User: “Order medicines for cold.”
+→ AI: “Got it 💊 — please list the medicines or upload your prescription (optional).”
+
+Once user lists items →
+AI: “Ordering Paracetamol and Cough Syrup from Apollo Pharmacy. Total ₹310.”
+[✅ Confirm] [🩺 Add More] [❌ Cancel]
+
+Backend simulates:
+
+/api/medicine/order with fields {items, store, total, eta}
+
+Emits real-time progress: Confirmed → Packed → Out for delivery → Delivered via Socket.io
+
+🧩 Backend Logic
+
+Create a generic endpoint /api/order/create that routes internally:
+
+"category": "grocery" → /api/grocery/order
+
+"category": "food" → /api/food/order
+
+"category": "medicine" → /api/medicine/order
+
+If items list is empty → respond with:
+
+{ "followUp": true, "message": "Please list the items you'd like to order." }
+
+
+When items are received → return mock total, ETA, and store name (Instamart, Swiggy, Apollo Pharmacy).
+
+Use realistic delays and emit progress events every 3–6 seconds:
+confirmed → preparing → out_for_delivery → delivered ✅
+
+🎨 UX / UI Enhancements
+
+When AI asks for items → show animated “typing dots” to simulate thinking.
+
+Allow user to add items via quick-select chips (e.g., [🥛 Milk] [🍞 Bread] [🥚 Eggs] [🧴 Soap] [💊 Paracetamol]).
+
+Animate chips with Framer Motion pop-in effect.
+
+Show category icon in chat bubble:
+
+🛒 Groceries
+
+🍔 Food
+
+💊 Medicine
+
+Use realistic mock stores: “Swiggy Instamart,” “Zomato,” “Apollo Pharmacy.”
+
+When order is ready, show a confirmation card with order summary and total cost.
+
+Add sound + confetti on “Order Confirmed ✅.”
+
+🧠 Data Example
+{
+  "category": "medicine",
+  "items": ["Paracetamol", "Cough Syrup"],
+  "store": "Apollo Pharmacy",
+  "total": "₹310",
+  "eta": "30 mins",
+  "status": "pending_confirmation"
+}
+
+💬 Additional Details
+
+Gemini should ask clarifying questions if user is vague:
+
+“Do you mean groceries or medicines?”
+
+“Which restaurant would you like to order from?”
+
+Support multiple item additions (“Add Milk and Bread too”).
+
+Use Framer Motion for all transitions: card appear, confirm buttons, success animations.
+
+Auto-scroll chat smoothly after AI messages.
+
+Show loading shimmer while AI “prepares” summary.
+
+Goal:
+Make the “order” experience in Effortless fully conversational, realistic, and adaptive — asking for specific items (including medicines), summarizing the order, and confirming it with mock payments and live status updates. The result should feel like talking to a real concierge who orders exactly what the user needs.
+
+✅ How to use:

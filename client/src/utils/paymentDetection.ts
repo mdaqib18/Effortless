@@ -3,7 +3,7 @@ export function requiresPayment(prompt: string, taskType?: string): boolean {
     return false;
   }
 
-  const taskTypeMatch = taskType ? ["bill", "cab", "grocery", "food"].includes(taskType) : false;
+  const taskTypeMatch = taskType ? ["bill", "cab", "grocery", "food", "medicine"].includes(taskType) : false;
   
   return taskTypeMatch;
 }
@@ -24,6 +24,7 @@ export function extractAmount(prompt: string, taskType?: string): number {
     bill: 500 + Math.floor(Math.random() * 2000),
     grocery: 800 + Math.floor(Math.random() * 1500),
     food: 300 + Math.floor(Math.random() * 500),
+    medicine: 150 + Math.floor(Math.random() * 350),
   };
   
   if (taskType && taskType in taskTypeAmounts) {

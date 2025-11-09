@@ -51,11 +51,13 @@ Preferred communication style: Simple, everyday language.
 **API Design:**
 - RESTful endpoints for task CRUD operations
 - `/api/ai/parse` endpoint for natural language processing
+- `/api/order/create` - Generic order endpoint with internal routing (grocery/food/medicine)
 - Mock automation endpoints simulating real-world services:
   - `/api/cab/book` - Multi-phase cab booking lifecycle
   - `/api/bill/pay` - Bill payment processing with 3D Secure simulation
-  - `/api/grocery/order` - Grocery order with delivery tracking
-  - `/api/food/order` - Food delivery with restaurant prep stages
+  - `/api/grocery/order` - Grocery order with delivery tracking (BigBasket, Instamart, etc.)
+  - `/api/food/order` - Food delivery with restaurant prep stages (Zomato, Swiggy, etc.)
+  - `/api/medicine/order` - Medicine order with pharmacy delivery (Apollo, PharmEasy, etc.)
   - `/api/reminder/create` - Scheduled notifications via cron
 
 **Real-Time Architecture:**

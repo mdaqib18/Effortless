@@ -7,6 +7,7 @@ import { executeCabBooking } from "./automations/cab";
 import { executeBillPayment } from "./automations/bill";
 import { executeGroceryOrder } from "./automations/grocery";
 import { executeFoodOrder } from "./automations/food";
+import { executeMedicineOrder } from "./automations/medicine";
 import { scheduleReminder } from "./automations/reminder";
 import { insertTaskSchema } from "@shared/schema";
 import { z } from "zod";
@@ -91,6 +92,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         reply: "I'll order food for you!",
         recurrence: "once",
       };
+    } else if (lower.includes("medicine") || lower.includes("tablet") || lower.includes("pharmacy") || lower.includes("capsule") || lower.includes("syrup")) {
+      return {
+        taskType: "medicine",
+        action: "order_medicine",
+        reply: "I'll order medicines for you from a nearby pharmacy!",
+        recurrence: "once",
+      };
     } else {
       return {
         taskType: "reminder",
@@ -161,6 +169,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               break;
             case "food":
               await executeFoodOrder(id, broadcast);
+              break;
+            case "medicine":
+              await executeMedicineOrder(id, broadcast);
               break;
             case "reminder":
               scheduleReminder(
@@ -246,6 +257,226 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const settings = await storage.createOrUpdateUserSettings(req.body);
       res.json(settings);
     } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Grocery order endpoint
+  app.post("/api/grocery/order", async (req, res) => {
+    try {
+      const { userId, items, scheduleType } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({ error: "userId is required" });
+      }
+
+      if (!items || items.length === 0) {
+        return res.json({
+          followUp: true,
+          message: "Please list the grocery items you'd like to order.",
+        });
+      }
+
+      const totalAmount = items.reduce((sum: number, item: any) => sum + (item.price || 0) * (item.quantity || 1), 0);
+      const stores = ["BigBasket", "Dunzo", "Blinkit", "Zepto", "Swiggy Instamart"];
+      const store = stores[Math.floor(Math.random() * stores.length)];
+
+      const validatedTask = insertTaskSchema.parse({
+        userId,
+        taskType: "grocery",
+        action: "order_groceries",
+        prompt: `Order ${items.map((i: any) => i.name).join(", ")}`,
+        status: "pending",
+        scheduleType: scheduleType || "one_time",
+        metadata: JSON.stringify({ items, store, totalAmount }),
+      });
+
+      const task = await storage.createTask(validatedTask);
+      
+      res.json({
+        taskId: task.id,
+        category: "grocery",
+        items,
+        store,
+        total: totalAmount,
+        eta: "30 mins",
+        message: `Grocery order created at ${store}`,
+      });
+    } catch (error: any) {
+      console.error("Grocery order error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Food order endpoint
+  app.post("/api/food/order", async (req, res) => {
+    try {
+      const { userId, items, scheduleType } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({ error: "userId is required" });
+      }
+
+      if (!items || items.length === 0) {
+        return res.json({
+          followUp: true,
+          message: "Please list the food items you'd like to order.",
+        });
+      }
+
+      const totalAmount = items.reduce((sum: number, item: any) => sum + (item.price || 0) * (item.quantity || 1), 0);
+      const restaurants = ["Zomato", "Swiggy", "Uber Eats", "Domino's", "McDonald's"];
+      const restaurant = restaurants[Math.floor(Math.random() * restaurants.length)];
+
+      const validatedTask = insertTaskSchema.parse({
+        userId,
+        taskType: "food",
+        action: "order_food",
+        prompt: `Order ${items.map((i: any) => i.name).join(", ")}`,
+        status: "pending",
+        scheduleType: scheduleType || "one_time",
+        metadata: JSON.stringify({ items, restaurant, totalAmount }),
+      });
+
+      const task = await storage.createTask(validatedTask);
+      
+      res.json({
+        taskId: task.id,
+        category: "food",
+        items,
+        restaurant,
+        total: totalAmount,
+        eta: "25 mins",
+        message: `Food order created from ${restaurant}`,
+      });
+    } catch (error: any) {
+      console.error("Food order error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Medicine order endpoint
+  app.post("/api/medicine/order", async (req, res) => {
+    try {
+      const { userId, items, scheduleType } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({ error: "userId is required" });
+      }
+
+      if (!items || items.length === 0) {
+        return res.json({
+          followUp: true,
+          message: "Please list the medicines you'd like to order.",
+        });
+      }
+
+      const totalAmount = items.reduce((sum: number, item: any) => sum + (item.price || 0) * (item.quantity || 1), 0);
+      const pharmacies = ["Apollo Pharmacy", "PharmEasy", "Medlife", "1mg", "Netmeds"];
+      const pharmacy = pharmacies[Math.floor(Math.random() * pharmacies.length)];
+
+      const validatedTask = insertTaskSchema.parse({
+        userId,
+        taskType: "medicine",
+        action: "order_medicine",
+        prompt: `Order ${items.map((i: any) => i.name).join(", ")}`,
+        status: "pending",
+        scheduleType: scheduleType || "one_time",
+        metadata: JSON.stringify({ items, pharmacy, totalAmount }),
+      });
+
+      const task = await storage.createTask(validatedTask);
+      
+      res.json({
+        taskId: task.id,
+        category: "medicine",
+        items,
+        pharmacy,
+        total: totalAmount,
+        eta: "30 mins",
+        message: `Medicine order created at ${pharmacy}`,
+      });
+    } catch (error: any) {
+      console.error("Medicine order error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Generic order creation endpoint with internal routing
+  app.post("/api/order/create", async (req, res) => {
+    try {
+      const { category, userId, items, scheduleType } = req.body;
+      
+      if (!category || !userId) {
+        return res.status(400).json({ error: "category and userId are required" });
+      }
+
+      if (!items || items.length === 0) {
+        return res.json({
+          followUp: true,
+          message: "Please list the items you'd like to order.",
+          category,
+        });
+      }
+
+      // Route internally based on category
+      let taskType, stores, store, totalAmount, eta, responseKey;
+      
+      switch (category) {
+        case "grocery":
+          taskType = "grocery";
+          stores = ["BigBasket", "Dunzo", "Blinkit", "Zepto", "Swiggy Instamart"];
+          store = stores[Math.floor(Math.random() * stores.length)];
+          totalAmount = items.reduce((sum: number, item: any) => sum + (item.price || 0) * (item.quantity || 1), 0);
+          eta = "30 mins";
+          responseKey = "store";
+          break;
+          
+        case "food":
+          taskType = "food";
+          stores = ["Zomato", "Swiggy", "Uber Eats", "Domino's", "McDonald's"];
+          store = stores[Math.floor(Math.random() * stores.length)];
+          totalAmount = items.reduce((sum: number, item: any) => sum + (item.price || 0) * (item.quantity || 1), 0);
+          eta = "25 mins";
+          responseKey = "restaurant";
+          break;
+          
+        case "medicine":
+          taskType = "medicine";
+          stores = ["Apollo Pharmacy", "PharmEasy", "Medlife", "1mg", "Netmeds"];
+          store = stores[Math.floor(Math.random() * stores.length)];
+          totalAmount = items.reduce((sum: number, item: any) => sum + (item.price || 0) * (item.quantity || 1), 0);
+          eta = "30 mins";
+          responseKey = "pharmacy";
+          break;
+          
+        default:
+          return res.status(400).json({ error: "Invalid category. Must be grocery, food, or medicine." });
+      }
+
+      const validatedTask = insertTaskSchema.parse({
+        userId,
+        taskType,
+        action: `order_${category}`,
+        prompt: `Order ${items.map((i: any) => i.name).join(", ")}`,
+        status: "pending",
+        scheduleType: scheduleType || "one_time",
+        metadata: JSON.stringify({ items, [responseKey]: store, totalAmount }),
+      });
+
+      const task = await storage.createTask(validatedTask);
+      
+      res.json({
+        taskId: task.id,
+        category,
+        items,
+        [responseKey]: store,
+        total: totalAmount,
+        eta,
+        message: `${category.charAt(0).toUpperCase() + category.slice(1)} order created at ${store}`,
+      });
+    } catch (error: any) {
+      console.error("Order creation error:", error);
       res.status(500).json({ error: error.message });
     }
   });
