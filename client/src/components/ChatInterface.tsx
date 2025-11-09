@@ -6,6 +6,8 @@ import { Card } from "@/components/ui/card";
 import { Send, Mic, Sparkles, Loader2, Repeat } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TaskRoutineToggle } from "@/components/TaskRoutineToggle";
+import { ItemSelectionChips } from "@/components/ItemSelectionChips";
+import { OrderSummaryCard } from "@/components/OrderSummaryCard";
 
 export interface Message {
   id: string;
@@ -55,13 +57,13 @@ export function ChatInterface({ onSendMessage, messages, isProcessing }: ChatInt
     const lastMessage = messages[messages.length - 1];
     if (!lastMessage || lastMessage.role !== "assistant") return;
 
-    if (lastMessage.needsItems) {
+    if (lastMessage.needsItems && conversationState === "idle") {
       setConversationState("awaiting_items");
       setOrderContext((prev) => ({
         ...prev,
         category: lastMessage.category as "grocery" | "food" | "medicine" | undefined,
       }));
-    } else if (lastMessage.items && lastMessage.items.length > 0) {
+    } else if (lastMessage.items && lastMessage.items.length > 0 && conversationState !== "pending_confirmation") {
       const total = lastMessage.items.reduce((sum, item) => sum + (item.price || 0), 0);
       setOrderContext({
         category: lastMessage.category as "grocery" | "food" | "medicine" | undefined,
@@ -69,12 +71,6 @@ export function ChatInterface({ onSendMessage, messages, isProcessing }: ChatInt
         total,
       });
       setConversationState("pending_confirmation");
-    } else if (conversationState !== "idle") {
-      setConversationState("completed");
-      setTimeout(() => {
-        setConversationState("idle");
-        setOrderContext({ items: [], total: 0 });
-      }, 3000);
     }
   }, [messages]);
 
@@ -92,6 +88,28 @@ export function ChatInterface({ onSendMessage, messages, isProcessing }: ChatInt
 
   const handleToggle = () => {
     setIsRoutine(!isRoutine);
+  };
+
+  const handleItemsSelected = async (items: Array<{ name: string; quantity: number; price: number }>) => {
+    const itemNames = items.map(i => i.name).join(", ");
+    await onSendMessage(itemNames, isRoutine ? "routine" : "one_time", {
+      ...orderContext,
+      items,
+      total: items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+    });
+  };
+
+  const handleConfirmOrder = async () => {
+    await onSendMessage("Confirm order", isRoutine ? "routine" : "one_time", orderContext);
+  };
+
+  const handleAddMore = () => {
+    setConversationState("awaiting_items");
+  };
+
+  const handleCancelOrder = () => {
+    setConversationState("idle");
+    setOrderContext({ items: [], total: 0 });
   };
 
   return (
@@ -183,6 +201,27 @@ export function ChatInterface({ onSendMessage, messages, isProcessing }: ChatInt
             </div>
           </motion.div>
         )}
+
+        <AnimatePresence mode="wait">
+          {conversationState === "awaiting_items" && orderContext.category && (
+            <ItemSelectionChips
+              category={orderContext.category}
+              onConfirm={handleItemsSelected}
+              onCancel={handleCancelOrder}
+            />
+          )}
+
+          {conversationState === "pending_confirmation" && orderContext.category && orderContext.items.length > 0 && (
+            <OrderSummaryCard
+              category={orderContext.category}
+              items={orderContext.items}
+              total={orderContext.total}
+              onConfirm={handleConfirmOrder}
+              onAddMore={handleAddMore}
+              onCancel={handleCancelOrder}
+            />
+          )}
+        </AnimatePresence>
 
         <div ref={messagesEndRef} />
       </div>
